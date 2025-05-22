@@ -1,4 +1,4 @@
-_G.DelayShot = 0.6
+_G.DelayShot = 0.4
 _G.ReachShot = 250
 
 _G.ModsAntilag = {}
