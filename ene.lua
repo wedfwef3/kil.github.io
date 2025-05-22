@@ -4,6 +4,8 @@ _G.ReachShot = 250
 _G.ModsAntilag = {}
 workspace.DescendantAdded:Connect(function(v)
     if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v:FindFirstChild("Head") and not game.Players:GetPlayerFromCharacter(v) then
+        -- Skip Model_Unicorn and Model_Horse
+        if v.Name == "Model_Unicorn" or v.Name == "Model_Horse" then return end
         if v.Humanoid.Health > 0 then
             table.insert(_G.ModsAntilag, v)
         end
@@ -16,6 +18,10 @@ while true do
     local DistanceGunAura, ModsTargetShotHead, ModsTargetShotHumanoid = math.huge, nil, nil
     for i, v in pairs(_G.ModsAntilag) do
         if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v:FindFirstChild("Head") and not game.Players:GetPlayerFromCharacter(v) then
+            -- Skip Model_Unicorn and Model_Horse
+            if v.Name == "Model_Unicorn" or v.Name == "Model_Horse" then
+                continue
+            end
             local DistanceGun = (game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart").Position - v.HumanoidRootPart.Position).Magnitude
             if DistanceGun < DistanceGunAura and DistanceGun < _G.ReachShot and v.Humanoid.Health > 0 then
                 ModsTargetShotHead, ModsTargetShotHumanoid, DistanceGunAura = v:FindFirstChild(_G.CharacterMods or "Head"), v.Humanoid, DistanceGun
