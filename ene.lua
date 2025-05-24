@@ -7,6 +7,12 @@ local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
+local targetNames = {
+    "Bond", "GoldBar", "SilverBar", "Crucifix",
+    "GoldStatue", "SilverPlate", "SilverStatue",
+    "BrainJar", "SilverNugget", "GoldNugget"
+}
+
 local function TPTo(position)
     pcall(function()
         hrp.CFrame = CFrame.new(position)
@@ -80,12 +86,35 @@ end
 -- Wait 1 second after sitting
 task.wait(1)
 
--- Tween sweep Z=30000 to Z=-49032.99 in steps of -2000
+local foundItems = {}
+
+local function alreadyTracked(pos)
+    for _, v in ipairs(foundItems) do
+        if (v - pos).Magnitude < 1 then
+            return true
+        end
+    end
+    return false
+end
+
 local x, y = 57, 3
 local startZ, endZ, stepZ = 30000, -49032.99, -2000
 local duration = 0.5
 
-local function tweenMovement()
+local function scanForValuables()
+    local runtime = Workspace:FindFirstChild("RuntimeItems")
+    if not runtime then return end
+    for _, item in ipairs(runtime:GetChildren()) do
+        if item:IsA("Model") and table.find(targetNames, item.Name) and item.PrimaryPart then
+            local pos = item.PrimaryPart.Position
+            if not alreadyTracked(pos) then
+                table.insert(foundItems, pos)
+            end
+        end
+    end
+end
+
+local function tweenMovementAndTrack()
     local currentZ = startZ
     while currentZ >= endZ do
         local startCFrame = CFrame.new(x, y, currentZ)
@@ -94,13 +123,29 @@ local function tweenMovement()
         local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
         local tween = TweenService:Create(hrp, tweenInfo, {CFrame = endCFrame})
         tween:Play()
+
+        -- Scan for valuables while tween is running
+        local tweenRunning = true
+        local conn = nil
+        conn = game:GetService("RunService").Heartbeat:Connect(function()
+            if tweenRunning then scanForValuables() end
+        end)
+
         tween.Completed:Wait()
+        tweenRunning = false
+        if conn then conn:Disconnect() end
 
         currentZ = currentZ + stepZ
     end
 end
 
-local success, errorMessage = pcall(tweenMovement)
+local success, errorMessage = pcall(tweenMovementAndTrack)
 if not success then
     warn("Error in tweenMovement: " .. errorMessage)
+end
+
+-- After tweening: TP to each found valuable item (NO collecting logic)
+for _, pos in ipairs(foundItems) do
+    TPTo(pos + Vector3.new(0, 5, 0)) -- +5 Y for safe landing
+    task.wait(0.33)
 end
