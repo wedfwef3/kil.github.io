@@ -1,17 +1,16 @@
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
-local rs = game:GetService("RunService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local plr = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
--- === MECHANIC CODE (Unchanged, except for UI toggling) ===
-local chr = plr.Character or plr.CharacterAdded:Wait()
+-- Mechanic State
+local chr = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local hum = chr:FindFirstChildWhichIsA("Humanoid")
 local hrp = chr:WaitForChild("HumanoidRootPart")
 local vi = game:GetService("VirtualInputManager")
-local rsRep = game:GetService("ReplicatedStorage")
-local GE = rsRep.GameEvents
+local GE = ReplicatedStorage.GameEvents
 
 local tog = {
 	sell=false, moonlit=false, harvest=false, tpw=false, infj=false, wander=false, hideplants=false,
@@ -49,27 +48,27 @@ if not workspace:FindFirstChild("platform") then
 	local p = Instance.new("Part", workspace)
 	p.Name = "platform"
 	p.Transparency = 1
-	p.Size = Vector3.new(3,.1,3)
+	p.Size = Vector3.new(3, .1, 3)
 	p.Anchored = true
 	p.CFrame = CFrame.new(0,0,0)
 end
 local platform = workspace:FindFirstChild("platform")
 local UserFarm = nil
 for _, v in pairs(workspace.Farm:GetChildren()) do
-	if v.Important.Data.Owner.Value == plr.Name then
+	if v.Important.Data.Owner.Value == LocalPlayer.Name then
 		UserFarm = v
 	end
 end
 
 function checkFruitAge(p)
 	p = p.Parent
-	return p.Grow.Age.Value >= p:GetAttribute"MaxAge"
+	return p.Grow.Age.Value >= p:GetAttribute("MaxAge")
 end
 
 function esp(v)
 	local par, name = v.Parent, v.Name
 	task.spawn(function()
-		if v:IsA"BasePart" and "MeshPart" ~= v.ClassName and not v:FindFirstChild"sdaisdada1" then
+		if v:IsA("BasePart") and "MeshPart" ~= v.ClassName and not v:FindFirstChild("sdaisdada1") then
 			local a,b=nil,nil
 			if "UnionOperation"==v.ClassName or v.Shape==Enum.PartType.Ball then
 				a=Instance.new("SphereHandleAdornment",v)
@@ -98,7 +97,7 @@ function esp(v)
 			a.Visible=false
 			task.wait(.1)
 			a.Visible=true
-			while par:FindFirstChild(name) and par[name]:FindFirstChild"sdaisdada1" do
+			while par:FindFirstChild(name) and par[name]:FindFirstChild("sdaisdada1") do
 				a.Color = v.BrickColor
 				task.wait(.05)
 			end
@@ -107,6 +106,7 @@ function esp(v)
 end
 
 function rerender()
+	if not UserFarm then return end
 	for _, v in pairs(UserFarm.Important.Plants_Physical:GetDescendants()) do
 		if v.Name == "sdaisdada1" or v.Name == "sdaisdada2" then
 			v:Destroy()
@@ -115,83 +115,82 @@ function rerender()
 end
 
 if binds.main then pcall(function() binds.main:Disconnect() end) end
-binds.main = rs.RenderStepped:Connect(function()
+binds.main = RunService.RenderStepped:Connect(function()
 	pcall(function()
-		plr = game.Players.LocalPlayer
-		chr = plr.Character or plr.CharacterAdded:Wait()
+		chr = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 		hum = chr:FindFirstChildWhichIsA("Humanoid")
 		hrp = chr:FindFirstChild("HumanoidRootPart")
 	end)
 	if tog.tpw and chr and hum then
-		if hum.MoveDirection.Magnitude>0 then
-			chr:TranslateBy(hum.MoveDirection*vals.tpws/5)
+		if hum.MoveDirection.Magnitude > 0 then
+			chr:TranslateBy(hum.MoveDirection * vals.tpws / 5)
 		end
 	end
 	if tog.moonlit and cd.moonlit then
-		cd.moonlit=false
-		GE.NightQuestRemoteEvent:FireServer"SubmitAllPlants"
+		cd.moonlit = false
+		GE.NightQuestRemoteEvent:FireServer("SubmitAllPlants")
 		task.wait(.2)
-		cd.moonlit=true
+		cd.moonlit = true
 	end
 	if tog.sell and cd.sell then
-		if #plr.Backpack:GetChildren()>199 then
-			cd.sell=false
-			local pos=hrp.CFrame
+		if #LocalPlayer.Backpack:GetChildren() > 199 then
+			cd.sell = false
+			local pos = hrp.CFrame
 			repeat
-				hrp.CFrame=workspace.Tutorial_Points.Tutorial_Point_2.CFrame
+				hrp.CFrame = workspace.Tutorial_Points.Tutorial_Point_2.CFrame
 				task.wait()
 				GE.Sell_Inventory:FireServer()
-			until not tog.sell or #plr.Backpack:GetChildren()<200
-			hrp.CFrame=pos
-			cd.sell=true
+			until not tog.sell or #LocalPlayer.Backpack:GetChildren() < 200
+			hrp.CFrame = pos
+			cd.sell = true
 		end
 	end
 	if tog.harvest and cd.harvest then
-		cd.harvest=false
+		cd.harvest = false
 		pcall(function()
-			local mode=vals.harvestmode
-			if mode=="Aura" then
+			local mode = vals.harvestmode
+			if mode == "Aura" then
 				for _,v in pairs(UserFarm.Important.Plants_Physical:GetDescendants()) do
-					if v:IsA"ProximityPrompt" and checkFruitAge(v.Parent) and (v.Parent.Position-hrp.Position).Magnitude<17 then
+					if v:IsA("ProximityPrompt") and checkFruitAge(v.Parent) and (v.Parent.Position-hrp.Position).Magnitude < 17 then
 						fireproximityprompt(v)
 					end
 				end
 				task.wait(.1)
-			elseif mode=="Random" then
-				local ps=UserFarm.Important.Plants_Physical:GetChildren()
-				local fs=ps[math.random(1,#ps)].Fruits:GetChildren()
-				local f=fs[math.random(1,#fs)]
+			elseif mode == "Random" then
+				local ps = UserFarm.Important.Plants_Physical:GetChildren()
+				local fs = ps[math.random(1,#ps)].Fruits:GetChildren()
+				local f = fs[math.random(1,#fs)]
 				for _,v in pairs(f:GetChildren()) do
-					local p=v:FindFirstChildWhichIsA"ProximityPrompt"
+					local p = v:FindFirstChildWhichIsA("ProximityPrompt")
 					if p and checkFruitAge(v) then
 						fireproximityprompt(p)
 						break
 					end
 				end
-			elseif mode=="Scuffed" then
+			elseif mode == "Scuffed" then
 				local ps=UserFarm.Important.Plants_Physical:GetChildren()
 				local fs=ps[math.random(1,#ps)].Fruits:GetChildren()
 				local f=fs[math.random(1,#fs)]
 				for _,v in pairs(f:GetChildren()) do
-					local p=v:FindFirstChildWhichIsA"ProximityPrompt"
+					local p = v:FindFirstChildWhichIsA("ProximityPrompt")
 					if p and checkFruitAge(v) then
-						vi:SendKeyEvent(1,101,0,game)
-						vi:SendKeyEvent(0,101,0,game)
-						hrp.CFrame=v.CFrame
-						vi:SendKeyEvent(1,101,0,game)
-						vi:SendKeyEvent(0,101,0,game)
+						vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+						vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+						hrp.CFrame = v.CFrame
+						vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+						vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 						break
 					end
 				end
 			else
-				vi:SendKeyEvent(1,101,0,game)
-				vi:SendKeyEvent(0,101,0,game)
+				vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+				vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 			end
 		end)
-		cd.harvest=true
+		cd.harvest = true
 	end
 	if cd.seeds then
-		cd.seeds=false
+		cd.seeds = false
 		for k,v in pairs(seeds) do
 			if v[2] then
 				for i=0,5 do
@@ -200,112 +199,112 @@ binds.main = rs.RenderStepped:Connect(function()
 			end
 		end
 		task.wait(.5)
-		cd.seeds=true
+		cd.seeds = true
 	end
 	if cd.gears then
-		cd.gears=false
+		cd.gears = false
 		for k,v in pairs(gears) do
 			if v[2] then
 				GE.BuyGearStock:FireServer(v[1])
 			end
 		end
 		task.wait(1)
-		cd.gears=true
+		cd.gears = true
 	end
 	if cd.evshop then
-		cd.evshop=false
+		cd.evshop = false
 		for k,v in pairs(event) do
 			if v[2] then
 				GE.BuyEventShopStock:FireServer(v[1])
 			end
 		end
 		task.wait(1)
-		cd.evshop=true
+		cd.evshop = true
 	end
-	if tog.wander and cd.wander and #plr.Backpack:GetChildren()<200 then
-		cd.wander=false
-		local timeout=false
-		local p,s=UserFarm.PetArea.Position,UserFarm.PetArea.Size
-		local goal=nil
-		local ps=UserFarm.Important.Plants_Physical:GetChildren()
+	if tog.wander and cd.wander and #LocalPlayer.Backpack:GetChildren() < 200 then
+		cd.wander = false
+		local timeout = false
+		local p,s = UserFarm.PetArea.Position,UserFarm.PetArea.Size
+		local goal = nil
+		local ps = UserFarm.Important.Plants_Physical:GetChildren()
 		pcall(function()
-			local fs=ps[math.random(1,#ps)].Fruits:GetChildren()
+			local fs = ps[math.random(1,#ps)].Fruits:GetChildren()
 			for _,v in pairs(fs[math.random(1,#fs)]:GetChildren()) do
-				local p=v:FindFirstChildWhichIsA"ProximityPrompt"
+				local p = v:FindFirstChildWhichIsA("ProximityPrompt")
 				if p and checkFruitAge(v) then
-					goal=p.Parent.Position+Vector3.new(0,4,0)
+					goal = p.Parent.Position + Vector3.new(0,4,0)
 					break
 				end
 			end
-			game.TweenService:Create(hrp,TweenInfo.new(.5,Enum.EasingStyle.Linear),{CFrame=CFrame.new(goal.X,goal.Y,goal.Z)}):Play()
-			task.spawn(function() task.wait(5) timeout=true end)
+			TweenService:Create(hrp, TweenInfo.new(.5, Enum.EasingStyle.Linear), {CFrame = CFrame.new(goal.X,goal.Y,goal.Z)}):Play()
+			task.spawn(function()
+				task.wait(5)
+				timeout = true
+			end)
 			repeat
 				task.wait()
-				platform.CFrame=hrp.CFrame-Vector3.new(0,2.3,0)
-			until(goal-hrp.Position).Magnitude<2 or timeout
+				platform.CFrame = hrp.CFrame - Vector3.new(0,2.3,0)
+			until (goal-hrp.Position).Magnitude < 2 or timeout
 		end)
-		cd.wander=true
+		cd.wander = true
 	end
 	if tog.hideplants and cd.hideplants then
-		cd.hideplants=false
+		cd.hideplants = false
 		for _,v in pairs(UserFarm.Important.Plants_Physical:GetChildren()) do
 			for _,i in pairs(v:GetChildren()) do
-				if "number"==type(tonumber(i.Name)) and (i:IsA"BasePart" or i:IsA"MeshPart") then
-					i.CanCollide=false
-					i.Transparency=1
+				if tonumber(i.Name) and (i:IsA("BasePart") or i:IsA("MeshPart")) then
+					i.CanCollide = false
+					i.Transparency = 1
 				end
-				if i.Name=="Branches" then
+				if i.Name == "Branches" then
 					for _,k in pairs(i:GetDescendants()) do
-						if k:IsA"BasePart" or k:IsA"MeshPart" then
-							k.CanCollide=false
-							k.Transparency=1
+						if k:IsA("BasePart") or k:IsA("MeshPart") then
+							k.CanCollide = false
+							k.Transparency = 1
 						end
 					end
 				end
 			end
 		end
 		task.wait(.25)
-		cd.hideplants=true
+		cd.hideplants = true
 	end
 	if tog.eggs and cd.eggs then
-		cd.eggs=false
+		cd.eggs = false
 		for i=1,3 do
 			GE.BuyPetEgg:FireServer(i)
 		end
 		task.wait(1)
-		cd.eggs=true
+		cd.eggs = true
 	end
 	if tog.feed then
 		local p = {}
 		for _,v in pairs(workspace.PetsPhysical:GetChildren()) do
-			if v:GetAttribute"OWNER" == plr.Name then
-				table.insert(p, v:GetAttribute"UUID")
+			if v:GetAttribute("OWNER") == LocalPlayer.Name then
+				table.insert(p, v:GetAttribute("UUID"))
 			end
 		end
-		GE.ActivePetService:FireServer("Feed", p[math.random(1,#p)])
-		pcall(function()
-			p = workspace.Part.ProximityPrompt
-			p.HoldDuration = 0
-			p.MaxActivationDistance = math.huge
-		end)
+		if #p > 0 then
+			GE.ActivePetService:FireServer("Feed", p[math.random(1,#p)])
+		end
 	end
 	if tog.esp and cd.esp then
-		cd.esp=false
+		cd.esp = false
 		for _,v in pairs(UserFarm.Important.Plants_Physical:GetChildren()) do
 			pcall(function()
 				for _,f in pairs(v.Fruits:GetChildren()) do
 					local var = f.Variant.Value
-					if "Gold"==var and vals.esp.gold or
-					"Rainbow"==var and vals.esp.rgb or
-					f:GetAttribute"Wet" and vals.esp.wet or
-					f:GetAttribute"Shocked" and vals.esp.shock or
-					f:GetAttribute"Moonlit" and vals.esp.moonlit or
-					f:GetAttribute"Bloodlit" and vals.esp.bloodlit or
-					f:GetAttribute"Celestial" and vals.esp.celestial or
-					f:GetAttribute"Frozen" and vals.esp.frozen or
-					f:GetAttribute"Chilled" and vals.esp.chilled then
+					if ("Gold" == var and vals.esp.gold) or
+					("Rainbow" == var and vals.esp.rgb) or
+					(f:GetAttribute("Wet") and vals.esp.wet) or
+					(f:GetAttribute("Shocked") and vals.esp.shock) or
+					(f:GetAttribute("Moonlit") and vals.esp.moonlit) or
+					(f:GetAttribute("Bloodlit") and vals.esp.bloodlit) or
+					(f:GetAttribute("Celestial") and vals.esp.celestial) or
+					(f:GetAttribute("Frozen") and vals.esp.frozen) or
+					(f:GetAttribute("Chilled") and vals.esp.chilled) then
 						for _,p in pairs(f:GetChildren()) do
-							if "number"==type(tonumber(p.Name)) and p:IsA"BasePart" then
+							if tonumber(p.Name) and p:IsA("BasePart") then
 								esp(p)
 							end
 						end
@@ -314,20 +313,20 @@ binds.main = rs.RenderStepped:Connect(function()
 			end)
 		end
 		task.wait(1)
-		cd.esp=true
+		cd.esp = true
 	end
 	if tog.daily then
-		cd.daily=false
-		rsRep.ByteNetReliable:FireServer(buffer.fromstring("\002"))
+		cd.daily = false
+		ReplicatedStorage.ByteNetReliable:FireServer(buffer.fromstring("\002"))
 		task.wait(1)
-		cd.daily=true
+		cd.daily = true
 	end
 end)
 
 if binds.jump then pcall(function() binds.jump:Disconnect() end) end
 binds.jump = UIS.JumpRequest:Connect(function()
 	if tog.infj and hum then
-		hum:ChangeState"Jumping"
+		hum:ChangeState("Jumping")
 	end
 end)
 
@@ -337,6 +336,35 @@ local Theme = {
     Button = Color3.fromRGB(30, 30, 30),
     Text = Color3.fromRGB(255, 255, 255)
 }
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+screenGui.Name = "GardenModernTabbedUI"
+
+local MainFrame = Instance.new("Frame", screenGui)
+MainFrame.Size = UDim2.new(0, 440, 0, 320)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Theme.Background
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+local frameOutline = Instance.new("UIStroke")
+frameOutline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+frameOutline.Thickness = 3
+frameOutline.Parent = MainFrame
+local hue = 0
+RunService.RenderStepped:Connect(function()
+    hue = (hue + 0.005) % 1
+    frameOutline.Color = Color3.fromHSV(hue, 1, 1)
+end)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "Garden Script Hub"
+Title.Size = UDim2.new(1, -20, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 5)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Theme.Text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+
 local TabsFrame = Instance.new("Frame", MainFrame)
 TabsFrame.Size = UDim2.new(0, 120, 1, -40)
 TabsFrame.Position = UDim2.new(0, 10, 0, 35)
@@ -428,7 +456,7 @@ CreateButton(MainTab, "Manual Sell", function()
     repeat
         GE.Sell_Inventory:FireServer()
         task.wait(.1)
-    until not tog.sell or #plr.Backpack:GetChildren() < 200
+    until not tog.sell or #LocalPlayer.Backpack:GetChildren() < 200
     hrp.CFrame = pos
 end, UDim2.new(0.05, 0, 0, 148))
 CreateToggle(MainTab, "Give Moonlit Fruits", function() return tog.moonlit end, function(v) tog.moonlit = v end, UDim2.new(0.05, 0, 0, 194))
@@ -467,12 +495,12 @@ CreateToggle(LocalTab, "TP Walk", function() return tog.tpw end, function(v) tog
 local EspTab = CreateTab("ESP")
 CreateToggle(EspTab, "Enable ESP", function() return tog.esp end, function(v) tog.esp = v rerender() end, UDim2.new(0.05, 0, 0, 10))
 
--- Drag main frame
-local dragToggle = false
+-- Drag main frame (Must be after MainFrame creation)
+local dragging = false
 local dragStart, startPos, dragInput
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragToggle = true
+        dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
     end
@@ -484,11 +512,11 @@ MainFrame.InputChanged:Connect(function(input)
 end)
 MainFrame.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragToggle = false
+        dragging = false
     end
 end)
 UIS.InputChanged:Connect(function(input)
-    if dragToggle and input == dragInput then
+    if dragging and input == dragInput then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(
             startPos.X.Scale,
