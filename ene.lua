@@ -10,8 +10,7 @@ local humanoid = character:WaitForChild("Humanoid")
 
 local targetNames = {
     "Bond", "GoldBar", "SilverBar", "Crucifix",
-    "GoldStatue", "SilverPlate", "SilverStatue",
-    "BrainJar", "SilverNugget", "GoldNugget"
+    "GoldStatue", "SilverStatue", "BrainJar"
 }
 
 local storageLocation = Vector3.new(57, 5, 30000)
@@ -20,7 +19,7 @@ local sackCapacity = 10 -- Set to 15 if needed
 
 local function TPTo(position)
     pcall(function()
-        hrp.CFrame = CFrame.new(position + Vector3.new(0, 5, 0))
+        hrp.CFrame = CFrame.new(position)
     end)
     task.wait(0.4)
 end
@@ -230,7 +229,8 @@ while #foundItems > 0 do
             end
         end
         if itemToCollect then
-            TPTo(pos)
+            -- TP 5 studs below the valuable item
+            TPTo(Vector3.new(pos.X, pos.Y - 5, pos.Z))
             UseSack()
             FireStore(itemToCollect)
             wasStored[itemToCollect] = true
