@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
-local StarterGui = game:GetService("StarterGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
@@ -13,8 +12,6 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "UniversalUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
-
-local gameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
 
 local buttonStyle = {
     Size = UDim2.new(0, 120, 0, 30),
@@ -83,13 +80,8 @@ local function ProcessFarmWithFeedback()
 end
 
 local SEED_RARITY_ORDER = {
-    ["Prismatic"] = 7,
-    ["Divine"] = 6,
-    ["Mythical"] = 5,
-    ["Legendary"] = 4,
-    ["Rare"] = 3,
-    ["Uncommon"] = 2,
-    ["Common"] = 1
+    ["Prismatic"] = 7, ["Divine"] = 6, ["Mythical"] = 5,
+    ["Legendary"] = 4, ["Rare"] = 3, ["Uncommon"] = 2, ["Common"] = 1
 }
 local function getSeedShopFrame()
     local gui = player.PlayerGui:FindFirstChild("Seed_Shop")
@@ -114,17 +106,13 @@ local function getSortedSeeds()
             })
         end
     end
-    table.sort(seeds, function(a, b)
-        return a.level > b.level
-    end)
+    table.sort(seeds, function(a, b) return a.level > b.level end)
     return seeds
 end
 local function purchaseSeedsSequentially(seeds, index)
     if not autoSeedsEnabled or not seeds[index] then return end
     ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(seeds[index].name)
-    task.delay(0.1, function()
-        purchaseSeedsSequentially(seeds, index + 1)
-    end)
+    task.delay(0.1, function() purchaseSeedsSequentially(seeds, index + 1) end)
 end
 local function autoPurchaseSeedsByRarity()
     while autoSeedsEnabled do
@@ -136,15 +124,7 @@ local function autoPurchaseSeedsByRarity()
     end
 end
 
-local GEARS_RARITY_ORDER = {
-    ["Prismatic"] = 7,
-    ["Divine"] = 6,
-    ["Mythical"] = 5,
-    ["Legendary"] = 4,
-    ["Rare"] = 3,
-    ["Uncommon"] = 2,
-    ["Common"] = 1
-}
+local GEARS_RARITY_ORDER = SEED_RARITY_ORDER
 local function getGearShopFrame()
     local gui = player.PlayerGui:FindFirstChild("Gear_Shop")
     if gui then
@@ -168,17 +148,13 @@ local function getSortedGears()
             })
         end
     end
-    table.sort(gears, function(a, b)
-        return a.level > b.level
-    end)
+    table.sort(gears, function(a, b) return a.level > b.level end)
     return gears
 end
 local function purchaseGearsSequentially(gears, index)
     if not autoToolsEnabled or not gears[index] then return end
     ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuyGearStock"):FireServer(gears[index].name)
-    task.delay(0.1, function()
-        purchaseGearsSequentially(gears, index + 1)
-    end)
+    task.delay(0.1, function() purchaseGearsSequentially(gears, index + 1) end)
 end
 local function autoPurchaseGearsByRarity()
     while autoToolsEnabled do
@@ -190,15 +166,7 @@ local function autoPurchaseGearsByRarity()
     end
 end
 
-local EVENT_ITEMS_RARITY_ORDER = {
-    ["Prismatic"] = 7,
-    ["Divine"] = 6,
-    ["Mythical"] = 5,
-    ["Legendary"] = 4,
-    ["Rare"] = 3,
-    ["Uncommon"] = 2,
-    ["Common"] = 1
-}
+local EVENT_ITEMS_RARITY_ORDER = SEED_RARITY_ORDER
 local function getEventShopFrame()
     local eventShopUI = player.PlayerGui:FindFirstChild("EventShop_UI")
     if eventShopUI then
@@ -222,17 +190,13 @@ local function getSortedEventItems()
             })
         end
     end
-    table.sort(items, function(a, b)
-        return a.level > b.level
-    end)
+    table.sort(items, function(a, b) return a.level > b.level end)
     return items
 end
 local function purchaseEventItemsSequentially(items, index)
     if not autoEventItemsEnabled or not items[index] then return end
     ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuyEventShopStock"):FireServer(items[index].name)
-    task.delay(0.1, function()
-        purchaseEventItemsSequentially(items, index + 1)
-    end)
+    task.delay(0.1, function() purchaseEventItemsSequentially(items, index + 1) end)
 end
 local function autoPurchaseEventItemsByRarity()
     while autoEventItemsEnabled do
@@ -352,44 +316,44 @@ for _, child in ipairs(screenGui:GetChildren()) do
     end
 end
 
-local function updatePos(input) 
+local function updatePos(input)
     if not dragStart then return end
-    local delta = input.Position - dragStart 
+    local delta = input.Position - dragStart
     for button, startPos in pairs(startPositions) do
         button.Position = UDim2.new(
-            startPos.X.Scale, 
+            startPos.X.Scale,
             startPos.X.Offset + delta.X,
             startPos.Y.Scale,
             startPos.Y.Offset + delta.Y
         )
     end
-end 
+end
 
-hideButton.InputBegan:Connect(function(input) 
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-        dragging = true 
+hideButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
         dragStart = input.Position
         for _, child in ipairs(screenGui:GetChildren()) do
             if child:IsA("TextButton") then
                 startPositions[child] = child.Position
             end
         end
-        input.Changed:Connect(function() 
-            if input.UserInputState == Enum.UserInputState.End then 
-                dragging = false 
-            end 
-        end) 
-    end 
-end) 
-hideButton.InputChanged:Connect(function(input) 
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then 
-        dragInput = input 
-    end 
-end) 
-game:GetService("UserInputService").InputChanged:Connect(function(input) 
-    if dragging and input == dragInput then 
-        updatePos(input) 
-    end 
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+hideButton.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        dragInput = input
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        updatePos(input)
+    end
 end)
 
 hideButton.MouseButton1Click:Connect(function()
