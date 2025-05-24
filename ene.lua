@@ -16,9 +16,7 @@ local targetNames = {
 
 local storageLocation = Vector3.new(57, 5, 30000)
 local wasStored = {}
-local wasCollected = {}
-local collectedPositions = {}
-local sackCapacity = 10 -- Default, can be 15 if your game changes
+local sackCapacity = 10 -- Set to 15 if needed
 
 local function TPTo(position)
     pcall(function()
@@ -142,7 +140,7 @@ local function dropIfFull()
     end
 end
 
--- Robust sit on MaximGun
+-- Sit on MaximGun, TPing to -9000 if not found
 while true do
     local seat = getSeat()
     if not seat then
@@ -159,7 +157,7 @@ task.wait(1)
 UseSack()
 
 -- Tween sweep and track valuables
-local foundItems = {}
+local foundItems = {} -- Only stores Vector3s
 
 local function alreadyTracked(pos)
     for _, v in ipairs(foundItems) do
@@ -180,8 +178,8 @@ local function scanForValuables()
     for _, item in ipairs(runtime:GetChildren()) do
         if item:IsA("Model") and table.find(targetNames, item.Name) and item.PrimaryPart then
             local pos = item.PrimaryPart.Position
-            if not alreadyTracked(pos) then
-                table.insert(foundItems, {pos = pos, name = item.Name})
+            if typeof(pos) == "Vector3" and not alreadyTracked(pos) then
+                table.insert(foundItems, pos)
             end
         end
     end
@@ -219,7 +217,7 @@ end
 -- Main collect/drop loop
 while #foundItems > 0 do
     for i = #foundItems, 1, -1 do
-        local pos = foundItems[i].pos
+        local pos = foundItems[i]
         -- Find the item at this position
         local runtime = Workspace:FindFirstChild("RuntimeItems")
         local itemToCollect = nil
