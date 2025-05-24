@@ -1,9 +1,10 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local plr = Players.LocalPlayer
+local character = plr.Character or plr.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
@@ -13,10 +14,17 @@ local targetNames = {
     "BrainJar", "SilverNugget", "GoldNugget"
 }
 
+local storageLocation = Vector3.new(57, 5, 30000)
+local wasStored = {}
+local wasCollected = {}
+local collectedPositions = {}
+local sackCapacity = 10 -- Default, can be 15 if your game changes
+
 local function TPTo(position)
     pcall(function()
-        hrp.CFrame = CFrame.new(position)
+        hrp.CFrame = CFrame.new(position + Vector3.new(0, 5, 0))
     end)
+    task.wait(0.4)
 end
 
 local function DestroyCase()
@@ -51,7 +59,7 @@ local function SitSeat(seat)
             task.wait(0.1)
         else
             local weld = seat:FindFirstChild("SeatWeld")
-            if weld and weld.Part1 and weld.Part1:IsDescendantOf(player.Character) then
+            if weld and weld.Part1 and weld.Part1:IsDescendantOf(plr.Character) then
                 if not jumped then
                     humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     task.wait(0.15)
@@ -70,7 +78,71 @@ local function SitSeat(seat)
     end
 end
 
--- Sit on MaximGun, TPing to -9000 if not found
+local function UseSack()
+    local sack = plr.Backpack:FindFirstChild("Sack")
+    if sack then
+        character:WaitForChild("Humanoid"):EquipTool(sack)
+        return true
+    end
+    return false
+end
+
+local function getPos(model)
+    if model:IsA("Model") then
+        if model.PrimaryPart then
+            return model.PrimaryPart.Position
+        else
+            local part = model:FindFirstChildWhichIsA("BasePart")
+            if part then return part.Position end
+        end
+    end
+    return nil
+end
+
+local function FindGold()
+    local golds = {}
+    local runtime = Workspace:FindFirstChild("RuntimeItems")
+    if not runtime then return golds end
+    for _, item in ipairs(runtime:GetChildren()) do
+        if table.find(targetNames, item.Name) and not wasStored[item] then
+            table.insert(golds, item)
+        end
+    end
+    return golds
+end
+
+local function FireStore(item)
+    ReplicatedStorage.Remotes.StoreItem:FireServer(item)
+end
+
+local function isFull()
+    local sack = character:FindFirstChild("Sack") or plr.Backpack:FindFirstChild("Sack")
+    if sack then
+        local label = sack:FindFirstChild("BillboardGui") and sack.BillboardGui:FindFirstChild("TextLabel")
+        if label and (label.Text == "10/10" or label.Text == "15/15") then
+            return tonumber(label.Text:match("^(%d+)/"))
+        end
+    end
+    return nil
+end
+
+local function FireDrop(count)
+    for _ = 1, count do
+        ReplicatedStorage.Remotes.DropItem:FireServer()
+        task.wait(0.1)
+    end
+end
+
+local function dropIfFull()
+    local sackCount = isFull()
+    if sackCount then
+        TPTo(storageLocation)
+        FireDrop(sackCount)
+        task.wait(0.2)
+    end
+end
+
+-- Robust sit on MaximGun
 while true do
     local seat = getSeat()
     if not seat then
@@ -83,9 +155,10 @@ while true do
     break
 end
 
--- Wait 1 second after sitting
 task.wait(1)
+UseSack()
 
+-- Tween sweep and track valuables
 local foundItems = {}
 
 local function alreadyTracked(pos)
@@ -108,7 +181,7 @@ local function scanForValuables()
         if item:IsA("Model") and table.find(targetNames, item.Name) and item.PrimaryPart then
             local pos = item.PrimaryPart.Position
             if not alreadyTracked(pos) then
-                table.insert(foundItems, pos)
+                table.insert(foundItems, {pos = pos, name = item.Name})
             end
         end
     end
@@ -124,7 +197,6 @@ local function tweenMovementAndTrack()
         local tween = TweenService:Create(hrp, tweenInfo, {CFrame = endCFrame})
         tween:Play()
 
-        -- Scan for valuables while tween is running
         local tweenRunning = true
         local conn = nil
         conn = game:GetService("RunService").Heartbeat:Connect(function()
@@ -144,8 +216,37 @@ if not success then
     warn("Error in tweenMovement: " .. errorMessage)
 end
 
--- After tweening: TP to each found valuable item (NO collecting logic)
-for _, pos in ipairs(foundItems) do
-    TPTo(pos + Vector3.new(0, 5, 0)) -- +5 Y for safe landing
-    task.wait(0.33)
+-- Main collect/drop loop
+while #foundItems > 0 do
+    for i = #foundItems, 1, -1 do
+        local pos = foundItems[i].pos
+        -- Find the item at this position
+        local runtime = Workspace:FindFirstChild("RuntimeItems")
+        local itemToCollect = nil
+        if runtime then
+            for _, item in ipairs(runtime:GetChildren()) do
+                if item:IsA("Model") and table.find(targetNames, item.Name) and item.PrimaryPart and (item.PrimaryPart.Position - pos).Magnitude < 1 and not wasStored[item] then
+                    itemToCollect = item
+                    break
+                end
+            end
+        end
+        if itemToCollect then
+            TPTo(pos)
+            UseSack()
+            FireStore(itemToCollect)
+            wasStored[itemToCollect] = true
+            table.remove(foundItems, i)
+            dropIfFull()
+            task.wait(0.4)
+        else
+            -- If not found at position, remove from list to avoid infinite loop
+            table.remove(foundItems, i)
+        end
+    end
+    -- Scan again in case new items spawned while collecting
+    scanForValuables()
 end
+
+-- Final drop if any remaining
+dropIfFull()
