@@ -1,49 +1,117 @@
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local rs = game:GetService("RunService")
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
+
+local Theme = {
+    Background = Color3.fromRGB(15, 15, 15),
+    Button = Color3.fromRGB(30, 30, 30),
+    Text = Color3.fromRGB(255, 255, 255)
+}
+
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "GardenHubUI"
+
+local MainFrame = Instance.new("Frame", screenGui)
+MainFrame.Size = UDim2.new(0, 400, 0, 280)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Theme.Background
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+local frameOutline = Instance.new("UIStroke")
+frameOutline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+frameOutline.Thickness = 3
+frameOutline.Parent = MainFrame
+local hue = 0
+rs.RenderStepped:Connect(function()
+    hue = (hue + 0.005) % 1
+    frameOutline.Color = Color3.fromHSV(hue, 1, 1)
+end)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "Garden Script Hub"
+Title.Size = UDim2.new(1, -20, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 5)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Theme.Text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+
+local TabsFrame = Instance.new("Frame", MainFrame)
+TabsFrame.Size = UDim2.new(0, 120, 1, -40)
+TabsFrame.Position = UDim2.new(0, 10, 0, 35)
+TabsFrame.BackgroundColor3 = Theme.Button
+Instance.new("UICorner", TabsFrame).CornerRadius = UDim.new(0, 6)
+
+local TabContentFrame = Instance.new("Frame", MainFrame)
+TabContentFrame.Size = UDim2.new(1, -140, 1, -40)
+TabContentFrame.Position = UDim2.new(0, 130, 0, 35)
+TabContentFrame.BackgroundColor3 = Theme.Background
+TabContentFrame.ClipsDescendants = true
+Instance.new("UICorner", TabContentFrame).CornerRadius = UDim.new(0, 6)
+
+local Tabs = {}
+
+local function CreateTab(tabName)
+    local TabButton = Instance.new("TextButton", TabsFrame)
+    TabButton.Text = tabName
+    TabButton.Size = UDim2.new(1, -10, 0, 32)
+    TabButton.Position = UDim2.new(0, 5, 0, (#Tabs * 37))
+    TabButton.BackgroundColor3 = Theme.Button
+    TabButton.TextColor3 = Theme.Text
+    TabButton.Font = Enum.Font.GothamBold
+    TabButton.TextSize = 16
+    Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 6)
+
+    local TabFrame = Instance.new("Frame", TabContentFrame)
+    TabFrame.Size = UDim2.new(1, 0, 1, 0)
+    TabFrame.Visible = (#Tabs == 0)
+    TabFrame.BackgroundTransparency = 1
+    table.insert(Tabs, TabFrame)
+
+    TabButton.MouseButton1Click:Connect(function()
+        for _, frame in pairs(Tabs) do
+            frame.Visible = false
+        end
+        TabFrame.Visible = true
+    end)
+    return TabFrame
+end
+
+local function CreateButton(parent, text, callback, position)
+    local Button = Instance.new("TextButton", parent)
+    Button.Text = text
+    Button.Size = UDim2.new(0.9, 0, 0, 36)
+    Button.Position = position
+    Button.BackgroundColor3 = Theme.Button
+    Button.TextColor3 = Theme.Text
+    Button.Font = Enum.Font.Gotham
+    Button.TextSize = 15
+    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
+    Button.MouseEnter:Connect(function()
+        Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end)
+    Button.MouseLeave:Connect(function()
+        Button.BackgroundColor3 = Theme.Button
+    end)
+    Button.MouseButton1Click:Connect(callback)
+    return Button
+end
+
+-- STATE & LOGIC FROM GARDEN CODE
 
 local autoSeedsEnabled = false
 local autoToolsEnabled = false
 local autoPetsEnabled = false
 local autoEventItemsEnabled = false
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "UniversalUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
-local buttonStyle = {
-    Size = UDim2.new(0, 120, 0, 30),
-    BackgroundColor3 = Color3.new(0.1, 0.1, 0.1),
-    BackgroundTransparency = 0.5,
-    Font = Enum.Font.SourceSansBold,
-    TextSize = 16
-}
-
-local function createButton(name, position, color, callback)
-    local button = Instance.new("TextButton")
-    button.Name = name
-    button.Size = buttonStyle.Size
-    button.Position = position
-    button.Text = name
-    button.TextColor3 = color
-    button.BackgroundColor3 = buttonStyle.BackgroundColor3
-    button.BackgroundTransparency = buttonStyle.BackgroundTransparency
-    button.Font = buttonStyle.Font
-    button.TextSize = buttonStyle.TextSize
-    button.Parent = screenGui
-    if callback then
-        button.MouseButton1Click:Connect(callback)
-    end
-    return button
-end
-
 local function RemovePartsWithoutPrompts(parent)
     local removed = 0
-    local children = parent:GetChildren()
-    for i = #children, 1, -1 do
-        local child = children[i]
+    for _, child in ipairs(parent:GetChildren()) do
         if child:IsA("Model") then
             removed = removed + RemovePartsWithoutPrompts(child)
         elseif child:IsA("BasePart") then
@@ -208,49 +276,72 @@ local function autoPurchaseEventItemsByRarity()
     end
 end
 
-local hideButton = createButton("Hide UI", UDim2.new(0, 10, 0, 10), Color3.new(1, 0.5, 0))
-local isHidden = false
+-- === TABS ===
 
-createButton("Close UI", UDim2.new(0, 10, 0, 50), Color3.new(1, 0, 0), function()
-    screenGui:Destroy()
-end)
+local MainTab = CreateTab("Main")
+local ShopTab = CreateTab("Shops")
+local AutoTab = CreateTab("Automation")
+local ToolsTab = CreateTab("Tools")
 
-createButton("Console", UDim2.new(0, 10, 0, 90), Color3.new(1, 1, 0.5), function()
-    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F9, false, game)
-end)
-
-createButton("Teleport to Tool Shop", UDim2.new(0, 270, 0, 10), Color3.new(0, 1, 1), function()
+-- MainTab buttons
+CreateButton(MainTab, "Teleport to Tool Shop", function()
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") and workspace:FindFirstChild("Tutorial_Points") and workspace.Tutorial_Points:FindFirstChild("Tutorial_Point_3") then
         character.HumanoidRootPart.CFrame = workspace.Tutorial_Points.Tutorial_Point_3.CFrame
     end
-end)
+end, UDim2.new(0.05, 0, 0, 10))
 
-local autoSeedsButton = createButton("Auto Seeds: Off", UDim2.new(0, 140, 0, 10), Color3.new(0.5, 1, 0.5))
-autoSeedsButton.MouseButton1Click:Connect(function()
+CreateButton(MainTab, "Remove Plant Parts", ProcessFarmWithFeedback, UDim2.new(0.05, 0, 0, 56))
+
+-- ShopTab buttons
+CreateButton(ShopTab, "Toggle Seed Shop UI", function()
+    local seedShop = player.PlayerGui:FindFirstChild("Seed_Shop")
+    if seedShop then
+        seedShop.Enabled = not seedShop.Enabled
+    end
+end, UDim2.new(0.05, 0, 0, 10))
+CreateButton(ShopTab, "Toggle Gear Shop UI", function()
+    local gearShop = player.PlayerGui:FindFirstChild("Gear_Shop")
+    if gearShop then
+        gearShop.Enabled = not gearShop.Enabled
+    end
+end, UDim2.new(0.05, 0, 0, 56))
+CreateButton(ShopTab, "Toggle Quests UI", function()
+    local dailyQuestsUI = player.PlayerGui:FindFirstChild("DailyQuests_UI")
+    if dailyQuestsUI then
+        dailyQuestsUI.Enabled = not dailyQuestsUI.Enabled
+    end
+end, UDim2.new(0.05, 0, 0, 102))
+CreateButton(ShopTab, "Toggle Event Shop UI", function()
+    local eventShop = player.PlayerGui:FindFirstChild("EventShop_UI")
+    if eventShop then
+        eventShop.Enabled = not eventShop.Enabled
+    end
+end, UDim2.new(0.05, 0, 0, 148))
+
+-- Automation Tab Buttons
+local autoSeedsBtn = CreateButton(AutoTab, "Auto Seeds: Off", function()
     autoSeedsEnabled = not autoSeedsEnabled
-    autoSeedsButton.Text = "Auto Seeds: " .. (autoSeedsEnabled and "On" or "Off")
-    autoSeedsButton.TextColor3 = autoSeedsEnabled and Color3.new(0, 1, 0) or Color3.new(0.5, 1, 0.5)
+    autoSeedsBtn.Text = "Auto Seeds: " .. (autoSeedsEnabled and "On" or "Off")
+    autoSeedsBtn.BackgroundColor3 = autoSeedsEnabled and Color3.fromRGB(34, 177, 76) or Theme.Button
     if autoSeedsEnabled then
         spawn(autoPurchaseSeedsByRarity)
     end
-end)
+end, UDim2.new(0.05, 0, 0, 10))
 
-local autoToolsButton = createButton("Auto Tools: Off", UDim2.new(0, 140, 0, 50), Color3.new(0.5, 0.5, 1))
-autoToolsButton.MouseButton1Click:Connect(function()
+local autoToolsBtn = CreateButton(AutoTab, "Auto Tools: Off", function()
     autoToolsEnabled = not autoToolsEnabled
-    autoToolsButton.Text = "Auto Tools: " .. (autoToolsEnabled and "On" or "Off")
-    autoToolsButton.TextColor3 = autoToolsEnabled and Color3.new(0, 0, 1) or Color3.new(0.5, 0.5, 1)
+    autoToolsBtn.Text = "Auto Tools: " .. (autoToolsEnabled and "On" or "Off")
+    autoToolsBtn.BackgroundColor3 = autoToolsEnabled and Color3.fromRGB(0, 162, 232) or Theme.Button
     if autoToolsEnabled then
         spawn(autoPurchaseGearsByRarity)
     end
-end)
+end, UDim2.new(0.05, 0, 0, 56))
 
-local autoPetsButton = createButton("Auto Pets: Off", UDim2.new(0, 140, 0, 90), Color3.new(1, 0.5, 1))
-autoPetsButton.MouseButton1Click:Connect(function()
+local autoPetsBtn = CreateButton(AutoTab, "Auto Pets: Off", function()
     autoPetsEnabled = not autoPetsEnabled
-    autoPetsButton.Text = "Auto Pets: " .. (autoPetsEnabled and "On" or "Off")
-    autoPetsButton.TextColor3 = autoPetsEnabled and Color3.new(1, 0, 1) or Color3.new(1, 0.5, 1)
+    autoPetsBtn.Text = "Auto Pets: " .. (autoPetsEnabled and "On" or "Off")
+    autoPetsBtn.BackgroundColor3 = autoPetsEnabled and Color3.fromRGB(255, 0, 255) or Theme.Button
     if autoPetsEnabled then
         spawn(function()
             while autoPetsEnabled do
@@ -266,102 +357,98 @@ autoPetsButton.MouseButton1Click:Connect(function()
             end
         end)
     end
-end)
+end, UDim2.new(0.05, 0, 0, 102))
 
-local autoEventItemsButton = createButton("Auto Event Items: Off", UDim2.new(0, 140, 0, 130), Color3.new(1, 0.8, 0.4))
-autoEventItemsButton.MouseButton1Click:Connect(function()
+local autoEventItemsBtn = CreateButton(AutoTab, "Auto Event Items: Off", function()
     autoEventItemsEnabled = not autoEventItemsEnabled
-    autoEventItemsButton.Text = "Auto Event Items: " .. (autoEventItemsEnabled and "On" or "Off")
-    autoEventItemsButton.TextColor3 = autoEventItemsEnabled and Color3.new(1, 0.6, 0) or Color3.new(1, 0.8, 0.4)
+    autoEventItemsBtn.Text = "Auto Event Items: " .. (autoEventItemsEnabled and "On" or "Off")
+    autoEventItemsBtn.BackgroundColor3 = autoEventItemsEnabled and Color3.fromRGB(255, 201, 14) or Theme.Button
     if autoEventItemsEnabled then
         spawn(autoPurchaseEventItemsByRarity)
     end
-end)
+end, UDim2.new(0.05, 0, 0, 148))
 
-createButton("Remove Plant Parts", UDim2.new(0, 270, 0, 50), Color3.new(1, 0.3, 0.3), ProcessFarmWithFeedback)
+-- Tools Tab
+CreateButton(ToolsTab, "Open Console", function()
+    game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F9, false, game)
+end, UDim2.new(0.05, 0, 0, 10))
 
-createButton("Seed Shop UI", UDim2.new(0, 270, 0, 90), Color3.new(0.5, 1, 0.5), function()
-    local seedShop = player.PlayerGui:FindFirstChild("Seed_Shop")
-    if seedShop then
-        seedShop.Enabled = not seedShop.Enabled
+CreateButton(ToolsTab, "Close UI", function()
+    screenGui:Destroy()
+end, UDim2.new(0.05, 0, 0, 56))
+
+-- Minimize/Show
+local minimizeButton = Instance.new("TextButton", MainFrame)
+minimizeButton.Text = "-"
+minimizeButton.Size = UDim2.new(0, 24, 0, 24)
+minimizeButton.Position = UDim2.new(1, -30, 0, 8)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+minimizeButton.TextColor3 = Theme.Text
+Instance.new("UICorner", minimizeButton).CornerRadius = UDim.new(0, 6)
+
+local reopenButton = Instance.new("TextButton", screenGui)
+reopenButton.Text = "Open Garden Hub"
+reopenButton.Size = UDim2.new(0, 160, 0, 32)
+reopenButton.Position = UDim2.new(0.5, 0, 0, -40)
+reopenButton.AnchorPoint = Vector2.new(0.5, 0)
+reopenButton.Visible = false
+reopenButton.BackgroundColor3 = Theme.Button
+reopenButton.TextColor3 = Theme.Text
+Instance.new("UICorner", reopenButton).CornerRadius = UDim.new(0, 6)
+
+local isMinimized = false
+minimizeButton.MouseButton1Click:Connect(function()
+    if not isMinimized then
+        isMinimized = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, 0, -0.7, 0),
+            Size = UDim2.new(0, 200, 0, 50)
+        }):Play()
+        wait(0.3)
+        MainFrame.Visible = false
+        reopenButton.Visible = true
     end
 end)
-createButton("Gear Shop UI", UDim2.new(0, 270, 0, 130), Color3.new(0.5, 0.5, 1), function()
-    local gearShop = player.PlayerGui:FindFirstChild("Gear_Shop")
-    if gearShop then
-        gearShop.Enabled = not gearShop.Enabled
-    end
-end)
-createButton("Quests UI", UDim2.new(0, 270, 0, 170), Color3.new(1, 0.5, 0.5), function()
-    local dailyQuestsUI = player.PlayerGui:FindFirstChild("DailyQuests_UI")
-    if dailyQuestsUI then
-        dailyQuestsUI.Enabled = not dailyQuestsUI.Enabled
-    end
-end)
-createButton("Event Shop UI", UDim2.new(0, 400, 0, 10), Color3.new(1, 1, 0), function()
-    local eventShop = player.PlayerGui:FindFirstChild("EventShop_UI")
-    if eventShop then
-        eventShop.Enabled = not eventShop.Enabled
+reopenButton.MouseButton1Click:Connect(function()
+    if isMinimized then
+        isMinimized = false
+        reopenButton.Visible = false
+        MainFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 400, 0, 280)
+        }):Play()
     end
 end)
 
-local dragging = false 
-local dragInput 
-local dragStart = nil 
-local startPositions = {}
-
-for _, child in ipairs(screenGui:GetChildren()) do
-    if child:IsA("TextButton") then
-        startPositions[child] = child.Position
+-- Drag main frame
+local dragToggle = false
+local dragStart, startPos, dragInput
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggle = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
     end
-end
-
-local function updatePos(input)
-    if not dragStart then return end
-    local delta = input.Position - dragStart
-    for button, startPos in pairs(startPositions) do
-        button.Position = UDim2.new(
+end)
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+MainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggle = false
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragToggle and input == dragInput then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
             startPos.X.Scale,
             startPos.X.Offset + delta.X,
             startPos.Y.Scale,
             startPos.Y.Offset + delta.Y
         )
     end
-end
-
-hideButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        for _, child in ipairs(screenGui:GetChildren()) do
-            if child:IsA("TextButton") then
-                startPositions[child] = child.Position
-            end
-        end
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-hideButton.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        dragInput = input
-    end
-end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
-        updatePos(input)
-    end
-end)
-
-hideButton.MouseButton1Click:Connect(function()
-    isHidden = not isHidden
-    for _, child in ipairs(screenGui:GetChildren()) do
-        if child:IsA("TextButton") and child ~= hideButton then
-            child.Visible = not isHidden
-        end
-    end
-    hideButton.Text = isHidden and "Show UI" or "Hide UI"
 end)
