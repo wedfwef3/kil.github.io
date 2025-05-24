@@ -340,7 +340,7 @@ local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"
 screenGui.Name = "GardenModernTabbedUI"
 
 local MainFrame = Instance.new("Frame", screenGui)
-MainFrame.Size = UDim2.new(0, 440, 0, 320)
+MainFrame.Size = UDim2.new(0, 660, 0, 220)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.BackgroundColor3 = Theme.Background
@@ -524,5 +524,48 @@ UIS.InputChanged:Connect(function(input)
             startPos.Y.Scale,
             startPos.Y.Offset + delta.Y
         )
+    end
+end)
+
+-- Minimize Button
+local MinimizeButton = Instance.new("TextButton", MainFrame)
+MinimizeButton.Text, MinimizeButton.Size, MinimizeButton.Position = "-", UDim2.new(0, 20, 0, 20), UDim2.new(1, -25, 0, 5)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Changed to bright green for better visibility
+MinimizeButton.TextColor3 = Theme.Text
+Instance.new("UICorner", MinimizeButton).CornerRadius = UDim.new(0, 6)
+
+-- Reopen Button (Hidden When UI is Minimized)
+local ReopenButton = Instance.new("TextButton", ScreenGui)
+ReopenButton.Text, ReopenButton.Size, ReopenButton.Position = "Open RINGTA SCRIPTS", UDim2.new(0, 150, 0, 30), UDim2.new(0.5, 0, 0, -22)
+ReopenButton.AnchorPoint, ReopenButton.Visible = Vector2.new(0.5, 0), false
+ReopenButton.BackgroundColor3, ReopenButton.TextColor3 = Theme.Button, Theme.Text
+Instance.new("UICorner", ReopenButton).CornerRadius = UDim.new(0, 6)
+
+local isMinimized = false
+
+-- Minimize Functionality
+MinimizeButton.MouseButton1Click:Connect(function()
+    if not isMinimized then -- Only minimize if not already minimized
+        isMinimized = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, 0, -0.7, 0),
+            Size = UDim2.new(0, 250, 0, 50)
+        }):Play()
+        wait(0.3)
+        MainFrame.Visible = false
+        ReopenButton.Visible = true
+    end
+end)
+
+-- Reopen Functionality
+ReopenButton.MouseButton1Click:Connect(function()
+    if isMinimized then -- Only reopen if currently minimized
+        isMinimized = false
+        ReopenButton.Visible = false
+        MainFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 350, 0, 230)
+        }):Play()
     end
 end)
