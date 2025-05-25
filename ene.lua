@@ -303,15 +303,28 @@ while #foundItems > 0 and not reachedLimit do
     scanForValuables()
 end
 
+
+local function getSackCount()
+    local sack = character:FindFirstChild("Sack") or plr.Backpack:FindFirstChild("Sack")
+    if sack then
+        local label = sack:FindFirstChild("BillboardGui") and sack.BillboardGui:FindFirstChild("TextLabel")
+        if label then
+            local current = label.Text:match("^(%d+)%/")
+            return tonumber(current)
+        end
+    end
+    return 0
+end
+
 -- After reaching limit, drop everything and end script
 if storeCount >= 40 then
-    pauseHiding = true
-    hiding = false -- Stop hiding visuals coroutine
     TPTo(storageLocation)
-    dropIfFull()
-    task.wait(1.2)
+    local itemCount = getSackCount()
+    if itemCount and itemCount > 0 then
+        FireDrop(itemCount)
+    end
+    task.wait(0.3)
     return -- end script
 end
 
 dropIfFull()
-hiding = false
