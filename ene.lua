@@ -1,360 +1,203 @@
--- === GARDEN MECHANIC CODE ===
-local plr=game.Players.LocalPlayer
-local chr=plr.Character or plr.CharacterAdded:Wait()
-local hum=chr:FindFirstChildWhichIsA("Humanoid")
-local hrp=chr:WaitForChild("HumanoidRootPart")
-local tog={
-	sell=false,moonlit=false,harvest=false,tpw=false,infj=false,wander=false,hideplants=false,
-	eggs=false,feed=false,esp=false,daily=false
-}
-local seeds={
-	{"Carrot",false},{"Strawberry",false},{"Blueberry",false},{"Orange Tulip",false},{"Tomato",false},{"Corn",false},
-	{"Daffodil",false},{"Watermelon",false},{"Pumpkin",false},{"Apple",false},{"Bamboo",false},{"Coconut",false},
-	{"Cactus",false},{"Dragon Fruit",false},{"Mango",false},{"Grape",false},{"Mushroom",false},{"Pepper",false},
-	{"Cacao",false},{"Beanstalk",false},
-}
-local gears={
-	{"Watering Can",false},{"Trowel",false},{"Recall Wrench",false},{"Basic Sprinkler",false},{"Advanced Sprinkler",false},
-	{"Godly Sprinkler",false},{"Lightning Rod",false},{"Master Sprinkler",false},
-}
-local event={
-	{"Mysterious Crate",false},{"Night Egg",false},{"Night Seed Pack",false},{"Blood Banana",false},{"Moon Melon",false},
-	{"Star Caller",false},{"Blood Hedgehog",false},{"Blood Kiwi",false},{"Blood Owl",false},
-}
-local cd={
-	harvest=true,seeds=true,gears=true,evshop=true,sell=true,moonlit=true,wander=true,hideplants=true,
-	eggs=true,esp=true,daily=true
-}
-local vals={
-	tpws=5,
-	harvestmode="Aura",
-	esp={
-		gold=false,rgb=false,shock=false,wet=false,moonlit=false,
-		bloodlit=false,celestial=false,frozen=false,chilled=false
-	}
-}
-local binds={}
-if not workspace:FindFirstChild("platform") then
-	local p=Instance.new("Part",workspace)
-	p.Name="platform"
-	p.Transparency=1
-	p.Size=Vector3.new(3,.1,3)
-	p.Anchored=true
-	p.CFrame=CFrame.new(0,0,0)
-end
-local platform=workspace:FindFirstChild("platform")
-local vi=game:GetService("VirtualInputManager")
-local GE=game:GetService("ReplicatedStorage").GameEvents
-local UserFarm=nil
-for _,v in pairs(workspace.Farm:GetChildren())do
-	if v.Important.Data.Owner.Value==plr.Name then
-		UserFarm=v
-	end
-end
-function checkFruitAge(p)
-	p=p.Parent
-	return p.Grow.Age.Value>=p:GetAttribute("MaxAge")
-end
-function esp(v)
-	local par,name=v.Parent,v.Name
-	task.spawn(function()
-		if v:IsA("BasePart") and "MeshPart"~=v.ClassName and not v:FindFirstChild("sdaisdada1") then
-			local a,b=nil,nil
-			if "UnionOperation"==v.ClassName or v.Shape==Enum.PartType.Ball then
-				a=Instance.new("SphereHandleAdornment",v)
-				b=Instance.new("SphereHandleAdornment",a)
-				a.Radius=v.Size.X/2
-				b.Radius=v.Size.X/2+.1
-			else
-				a=Instance.new("BoxHandleAdornment",v)
-				b=Instance.new("BoxHandleAdornment",a)
-				a.Size=v.Size
-				b.Size=v.Size+Vector3.new(.1,.1,.1)
-				a.CFrame=CFrame.Angles(v.CFrame:ToOrientation())
-				b.CFrame=CFrame.Angles(v.CFrame:ToOrientation())
-			end
-			a.Name="sdaisdada1"
-			b.Name="sdaisdada2"
-			a.Adornee=v
-			b.Adornee=v
-			a.AlwaysOnTop=true
-			b.AlwaysOnTop=true
-			a.ZIndex=1
-			b.ZIndex=0
-			a.Transparency=.4
-			b.Transparency=0
-			b.Color=BrickColor.new(1)
-			a.Visible=false
-			task.wait(.1)
-			a.Visible=true
-			while par:FindFirstChild(name) and par[name]:FindFirstChild("sdaisdada1") do
-				a.Color=v.BrickColor
-				task.wait(.05)
-			end
-		end
-	end)
-end
-function rerender()
-	if not UserFarm then return end
-	for _,v in pairs(UserFarm.Important.Plants_Physical:GetDescendants())do
-		if v.Name=="sdaisdada1" or v.Name=="sdaisdada2" then
-			v:Destroy()
-		end
-	end
-end
-if binds.main then pcall(function() binds.main:Disconnect() end) end
-binds.main=game:GetService("RunService").RenderStepped:Connect(function()
-	pcall(function()
-		plr=game.Players.LocalPlayer
-		chr=plr.Character
-		hum=chr.Humanoid
-		hrp=chr.HumanoidRootPart
-	end)
-	if tog.tpw and chr and hum then
-		if hum.MoveDirection.Magnitude>0 then
-			chr:TranslateBy(hum.MoveDirection*vals.tpws/5)
-		end
-	end
-	if tog.moonlit and cd.moonlit then
-		cd.moonlit=false
-		GE.NightQuestRemoteEvent:FireServer("SubmitAllPlants")
-		task.wait(.2)
-		cd.moonlit=true
-	end
-	if tog.sell and cd.sell then
-		if #plr.Backpack:GetChildren()>199 then
-			cd.sell=false
-			local pos=hrp.CFrame
-			repeat
-				hrp.CFrame=workspace.Tutorial_Points.Tutorial_Point_2.CFrame
-				task.wait()
-				GE.Sell_Inventory:FireServer()
-			until not tog.sell or #plr.Backpack:GetChildren()<200
-			hrp.CFrame=pos
-			cd.sell=true
-		end
-	end
-	if tog.harvest and cd.harvest then
-		cd.harvest=false
-		pcall(function()
-			local mode=vals.harvestmode
-			if mode=="Aura"then
-				for _,v in pairs(UserFarm.Important.Plants_Physical:GetDescendants())do
-					if v:IsA("ProximityPrompt") and checkFruitAge(v.Parent) and (v.Parent.Position-hrp.Position).Magnitude<17 then
-						fireproximityprompt(v)
-					end
-				end
-				task.wait(.1)
-			elseif mode=="Random"then
-				local ps=UserFarm.Important.Plants_Physical:GetChildren()
-				local fs=ps[math.random(1,#ps)].Fruits:GetChildren()
-				local f=fs[math.random(1,#fs)]
-				for _,v in pairs(f:GetChildren())do
-					local p=v:FindFirstChildWhichIsA("ProximityPrompt")
-					if p and checkFruitAge(v)then
-						fireproximityprompt(p)
-						break
-					end
-				end
-			elseif mode=="Scuffed"then
-				local ps=UserFarm.Important.Plants_Physical:GetChildren()
-				local fs=ps[math.random(1,#ps)].Fruits:GetChildren()
-				local f=fs[math.random(1,#fs)]
-				for _,v in pairs(f:GetChildren())do
-					local p=v:FindFirstChildWhichIsA("ProximityPrompt")
-					if p and checkFruitAge(v)then
-						vi:SendKeyEvent(true,Enum.KeyCode.E,false,game)
-						vi:SendKeyEvent(false,Enum.KeyCode.E,false,game)
-						hrp.CFrame=v.CFrame
-						vi:SendKeyEvent(true,Enum.KeyCode.E,false,game)
-						vi:SendKeyEvent(false,Enum.KeyCode.E,false,game)
-						break
-					end
-				end
-			else
-				vi:SendKeyEvent(true,Enum.KeyCode.E,false,game)
-				vi:SendKeyEvent(false,Enum.KeyCode.E,false,game)
-			end
-		end)
-		cd.harvest=true
-	end
-	if cd.seeds then
-		cd.seeds=false
-		for k,v in pairs(seeds)do
-			if v[2]then
-				for i=0,5 do
-					GE.BuySeedStock:FireServer(v[1])
-				end
-			end
-		end
-		task.wait(.5)
-		cd.seeds=true
-	end
-	if cd.gears then
-		cd.gears=false
-		for k,v in pairs(gears)do
-			if v[2]then
-				GE.BuyGearStock:FireServer(v[1])
-			end
-		end
-		task.wait(1)
-		cd.gears=true
-	end
-	if cd.evshop then
-		cd.evshop=false
-		for k,v in pairs(event)do
-			if v[2]then
-				GE.BuyEventShopStock:FireServer(v[1])
-			end
-		end
-		task.wait(1)
-		cd.evshop=true
-	end
-	if tog.wander and cd.wander and #plr.Backpack:GetChildren()<200 then
-		cd.wander=false
-		local timeout=false
-		local goal=nil
-		local ps=UserFarm.Important.Plants_Physical:GetChildren()
-		pcall(function()
-			local fs=ps[math.random(1,#ps)].Fruits:GetChildren()
-			for _,v in pairs(fs[math.random(1,#fs)]:GetChildren())do
-				local p=v:FindFirstChildWhichIsA("ProximityPrompt")
-				if p and checkFruitAge(v)then
-					goal=p.Parent.Position+Vector3.new(0,4,0)
-					break
-				end
-			end
-			game.TweenService:Create(hrp,TweenInfo.new(.5,Enum.EasingStyle.Linear),{CFrame=CFrame.new(goal.X,goal.Y,goal.Z)}):Play()
-			task.spawn(function() task.wait(5) timeout=true end)
-			repeat
-				task.wait()
-				platform.CFrame=hrp.CFrame-Vector3.new(0,2.3,0)
-			until(goal-hrp.Position).Magnitude<2 or timeout
-		end)
-		cd.wander=true
-	end
-	if tog.hideplants and cd.hideplants then
-		cd.hideplants=false
-		for _,v in pairs(UserFarm.Important.Plants_Physical:GetChildren())do
-			for _,i in pairs(v:GetChildren())do
-				if tonumber(i.Name) and (i:IsA("BasePart") or i:IsA("MeshPart")) then
-					i.CanCollide=false
-					i.Transparency=1
-				end
-				if i.Name=="Branches"then
-					for _,k in pairs(i:GetDescendants())do
-						if k:IsA("BasePart") or k:IsA("MeshPart")then
-							k.CanCollide=false
-							k.Transparency=1
-						end
-					end
-				end
-			end
-		end
-		task.wait(.25)
-		cd.hideplants=true
-	end
-	if tog.eggs and cd.eggs then
-		cd.eggs=false
-		for i=1,3 do
-			GE.BuyPetEgg:FireServer(i)
-		end
-		task.wait(1)
-		cd.eggs=true
-	end
-	if tog.feed then
-		local p={}
-		for _,v in pairs(workspace.PetsPhysical:GetChildren())do
-			if v:GetAttribute("OWNER")==plr.Name then
-				table.insert(p,v:GetAttribute("UUID"))
-			end
-		end
-		if #p>0 then
-			GE.ActivePetService:FireServer("Feed",p[math.random(1,#p)])
-		end
-	end
-	if tog.esp and cd.esp then
-		cd.esp=false
-		for _,v in pairs(UserFarm.Important.Plants_Physical:GetChildren())do
-			pcall(function()
-				for _,f in pairs(v.Fruits:GetChildren())do
-					local var=f.Variant.Value
-					if ("Gold"==var and vals.esp.gold) or
-					("Rainbow"==var and vals.esp.rgb) or
-					(f:GetAttribute("Wet") and vals.esp.wet) or
-					(f:GetAttribute("Shocked") and vals.esp.shock) or
-					(f:GetAttribute("Moonlit") and vals.esp.moonlit) or
-					(f:GetAttribute("Bloodlit") and vals.esp.bloodlit) or
-					(f:GetAttribute("Celestial") and vals.esp.celestial) or
-					(f:GetAttribute("Frozen") and vals.esp.frozen) or
-					(f:GetAttribute("Chilled") and vals.esp.chilled) then
-						for _,p in pairs(f:GetChildren())do
-							if tonumber(p.Name) and p:IsA("BasePart")then
-								esp(p)
-							end
-						end
-					end
-				end
-			end)
-		end
-		task.wait(1)
-		cd.esp=true
-	end
-	if tog.daily then
-		cd.daily=false
-		game:GetService("ReplicatedStorage").ByteNetReliable:FireServer(buffer.fromstring("\002"))
-		task.wait(1)
-		cd.daily=true
-	end
-end)
-if binds.jump then pcall(function() binds.jump:Disconnect() end) end
-binds.jump=game:GetService("UserInputService").JumpRequest:Connect(function()
-	if tog.infj and hum then
-		hum:ChangeState("Jumping")
-	end
-end)
+--[[
+  Improved "Grow-a-Garden" UI with "Farm" Tab, modern visuals, and essential farm automation buttons:
+    - Autobuy Seeds
+    - Autoplant
+    - Autocollect
 
--- === MODERN TABBED UI ===
+  Combines your modern UI style with extra game mechanic code.
+  All logic is modular for extensibility.
+--]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local localPlayer = Players.LocalPlayer
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+
+-- === SETTINGS & STATE ===
+local settings = {
+    auto_buy_seeds = false,
+    use_distance_check = true,
+    collection_distance = 17,
+    collect_nearest_fruit = true,
+    debug_mode = false,
+}
+local selected_seed = "Carrot"
+local plant_position = nil
+local is_auto_planting = false
+local is_auto_collecting = false
+
+local seedsList = {'Carrot', 'Strawberry', "Blueberry", 'Orange Tulip', 'Tomato', 'Corn', 'Watermelon', 'Daffodil', "Pumpkin", 'Apple', 'Bamboo', 'Coconut', 'Cactus', 'Dragon Fruit', 'Mango', 'Grape', 'Mushroom', 'Pepper', 'Cacao', 'Beanstalk'}
+
+local GameEvents = ReplicatedStorage:WaitForChild("GameEvents")
+local buySeedEvent = GameEvents:WaitForChild("BuySeedStock")
+local plantSeedEvent = GameEvents:WaitForChild("Plant_RE")
+
+-- === GAME LOGIC ===
+local function get_player_farm()
+    for _, farm in ipairs(workspace.Farm:GetChildren()) do
+        local important_folder = farm:FindFirstChild("Important")
+        if important_folder then
+            local owner_value = important_folder:FindFirstChild("Data") and important_folder.Data:FindFirstChild("Owner")
+            if owner_value and owner_value.Value == localPlayer.Name then
+                return farm
+            end
+        end
+    end
+    return nil
+end
+
+local function buy_seed(seed_name)
+    if playerGui.Seed_Shop and playerGui.Seed_Shop.Frame.ScrollingFrame[seed_name] then
+        local t = playerGui.Seed_Shop.Frame.ScrollingFrame[seed_name].Main_Frame.Cost_Text
+        if t.TextColor3 ~= Color3.fromRGB(255, 0, 0) then
+            buySeedEvent:FireServer(seed_name)
+        end
+    end
+end
+
+local function equip_seed(seed_name)
+    local character = localPlayer.Character
+    if not character then return false end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+
+    for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
+        if item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seed_name then
+            humanoid:EquipTool(item)
+            task.wait()
+            local equipped_tool = character:FindFirstChildOfClass("Tool")
+            if equipped_tool and equipped_tool:GetAttribute("ITEM_TYPE") == "Seed" and equipped_tool:GetAttribute("Seed") == seed_name then
+                return equipped_tool
+            end
+        end
+    end
+
+    local equipped_tool = character:FindFirstChildOfClass("Tool")
+    if equipped_tool and equipped_tool:GetAttribute("ITEM_TYPE") == "Seed" and equipped_tool:GetAttribute("Seed") == seed_name then
+        return equipped_tool
+    end
+
+    return false
+end
+
+local function auto_collect_fruits()
+    while is_auto_collecting do
+        local character = localPlayer.Character
+        local player_root_part = character and character:FindFirstChild("HumanoidRootPart")
+        local current_farm = get_player_farm()
+
+        if not (player_root_part and current_farm and current_farm.Important and current_farm.Important.Plants_Physical) then
+            task.wait(0.5)
+            continue
+        end
+
+        local plants_physical = current_farm.Important.Plants_Physical
+
+        if settings.collect_nearest_fruit then
+            local nearest_prompt = nil
+            local min_distance = math.huge
+
+            for _, plant in ipairs(plants_physical:GetChildren()) do
+                for _, descendant in ipairs(plant:GetDescendants()) do
+                    if descendant:IsA("ProximityPrompt") and descendant.Enabled and descendant.Parent then
+                        local distance_to_fruit = (player_root_part.Position - descendant.Parent.Position).Magnitude
+                        local can_collect = not settings.use_distance_check or (distance_to_fruit <= settings.collection_distance)
+                        if can_collect and distance_to_fruit < min_distance then
+                            min_distance = distance_to_fruit
+                            nearest_prompt = descendant
+                        end
+                    end
+                end
+            end
+
+            if nearest_prompt then
+                fireproximityprompt(nearest_prompt)
+                task.wait(0.05)
+            end
+        else
+            for _, plant in ipairs(plants_physical:GetChildren()) do
+                for _, fruit_prompt in ipairs(plant:GetDescendants()) do
+                    if fruit_prompt:IsA("ProximityPrompt") and fruit_prompt.Enabled and fruit_prompt.Parent then
+                        local collect_this = not settings.use_distance_check or ((player_root_part.Position - fruit_prompt.Parent.Position).Magnitude <= settings.collection_distance)
+                        if collect_this then
+                            fireproximityprompt(fruit_prompt)
+                            task.wait(0.05)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end
+
+local function auto_plant_seeds(seed_name)
+    while is_auto_planting do
+        local seed_in_hand = equip_seed(seed_name)
+        if not seed_in_hand and settings.auto_buy_seeds then
+            buy_seed(seed_name)
+            task.wait(0.1)
+            seed_in_hand = equip_seed(seed_name)
+        end
+
+        if seed_in_hand and plant_position then
+            local quantity = seed_in_hand:GetAttribute("Quantity")
+            if quantity and quantity > 0 then
+                plantSeedEvent:FireServer(plant_position, seed_name)
+                task.wait(0.1)
+            end
+        end
+        task.wait(0.2)
+    end
+end
+
+-- === UI CONSTRUCTION (Modernized) ===
+
 local Theme = {
-    Background = Color3.fromRGB(15, 15, 15),
-    Button = Color3.fromRGB(30, 30, 30),
+    Background = Color3.fromRGB(13, 16, 20),
+    Button = Color3.fromRGB(36, 41, 49),
+    Accent = Color3.fromRGB(56, 132, 255),
     Text = Color3.fromRGB(255, 255, 255)
 }
-local screenGui = Instance.new("ScreenGui", plr:WaitForChild("PlayerGui"))
-screenGui.Name = "GardenModernTabbedUI"
+local screenGui = Instance.new("ScreenGui", playerGui)
+screenGui.Name = "BetterGardenTabbedUI"
 
 local MainFrame = Instance.new("Frame", screenGui)
-MainFrame.Size = UDim2.new(0, 520, 0, 300)
+MainFrame.Size = UDim2.new(0, 560, 0, 340)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.BackgroundColor3 = Theme.Background
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
 local frameOutline = Instance.new("UIStroke")
 frameOutline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-frameOutline.Thickness = 3
+frameOutline.Thickness = 4
 frameOutline.Parent = MainFrame
 local hue = 0
-game:GetService("RunService").RenderStepped:Connect(function()
-    hue = (hue + 0.005) % 1
-    frameOutline.Color = Color3.fromHSV(hue, 1, 1)
+RunService.RenderStepped:Connect(function()
+    hue = (hue + 0.008) % 1
+    frameOutline.Color = Color3.fromHSV(hue, 0.8, 1)
 end)
 
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "Garden Script Hub"
-Title.Size = UDim2.new(1, -20, 0, 28)
-Title.Position = UDim2.new(0, 10, 0, 5)
+Title.Text = "🌱 Grow-a-Garden Hub"
+Title.Size = UDim2.new(1, -30, 0, 32)
+Title.Position = UDim2.new(0, 18, 0, 10)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = Theme.Text
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
+Title.TextSize = 21
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local TabsFrame = Instance.new("Frame", MainFrame)
-TabsFrame.Size = UDim2.new(0, 130, 1, -40)
-TabsFrame.Position = UDim2.new(0, 10, 0, 35)
+TabsFrame.Size = UDim2.new(0, 140, 1, -50)
+TabsFrame.Position = UDim2.new(0, 14, 0, 46)
 TabsFrame.BackgroundColor3 = Theme.Button
 TabsFrame.ClipsDescendants = true
-Instance.new("UICorner", TabsFrame).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", TabsFrame).CornerRadius = UDim.new(0, 7)
 
 local TabsScroll = Instance.new("ScrollingFrame", TabsFrame)
 TabsScroll.Size = UDim2.new(1, 0, 1, 0)
@@ -367,54 +210,54 @@ TabsScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 TabsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 local TabContentFrame = Instance.new("Frame", MainFrame)
-TabContentFrame.Size = UDim2.new(1, -150, 1, -40)
-TabContentFrame.Position = UDim2.new(0, 140, 0, 35)
+TabContentFrame.Size = UDim2.new(1, -170, 1, -50)
+TabContentFrame.Position = UDim2.new(0, 160, 0, 46)
 TabContentFrame.BackgroundColor3 = Theme.Background
 TabContentFrame.ClipsDescendants = true
-Instance.new("UICorner", TabContentFrame).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", TabContentFrame).CornerRadius = UDim.new(0, 7)
 
 local Tabs = {}
 local function CreateTab(tabName)
     local TabButton = Instance.new("TextButton", TabsScroll)
     TabButton.Text = tabName
-    TabButton.Size = UDim2.new(1, -10, 0, 32)
-    TabButton.Position = UDim2.new(0, 5, 0, (#Tabs * 36))
+    TabButton.Size = UDim2.new(1, -12, 0, 35)
+    TabButton.Position = UDim2.new(0, 6, 0, (#Tabs * 40))
     TabButton.BackgroundColor3 = Theme.Button
     TabButton.TextColor3 = Theme.Text
     TabButton.Font = Enum.Font.GothamBold
-    TabButton.TextSize = 16
+    TabButton.TextSize = 17
     TabButton.AutoButtonColor = true
-    Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 6)
-
-    TabsScroll.CanvasSize = UDim2.new(0, 0, 0, (#Tabs + 1) * 36 + 10)
-
+    Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 7)
+    -- Highlight on select
+    TabButton.MouseButton1Down:Connect(function()
+        for i, frame in ipairs(Tabs) do
+            frame.Visible = false
+            TabsScroll:GetChildren()[i].BackgroundColor3 = Theme.Button
+        end
+        TabButton.BackgroundColor3 = Theme.Accent
+        Tabs[#Tabs].Visible = true
+    end)
+    TabsScroll.CanvasSize = UDim2.new(0, 0, 0, (#Tabs + 1) * 40 + 8)
     local TabFrame = Instance.new("Frame", TabContentFrame)
     TabFrame.Size = UDim2.new(1, 0, 1, 0)
     TabFrame.Visible = (#Tabs == 0)
     TabFrame.BackgroundTransparency = 1
     table.insert(Tabs, TabFrame)
-
-    TabButton.MouseButton1Click:Connect(function()
-        for _, frame in pairs(Tabs) do
-            frame.Visible = false
-        end
-        TabFrame.Visible = true
-    end)
     return TabFrame
 end
 
-local function CreateButton(parent, text, callback, position)
+local function CreateButton(parent, text, callback, ypos)
     local Button = Instance.new("TextButton", parent)
     Button.Text = text
-    Button.Size = UDim2.new(0.92, 0, 0, 28)
-    Button.Position = position
+    Button.Size = UDim2.new(0.88, 0, 0, 36)
+    Button.Position = UDim2.new(0.06, 0, 0, ypos)
     Button.BackgroundColor3 = Theme.Button
     Button.TextColor3 = Theme.Text
     Button.Font = Enum.Font.Gotham
-    Button.TextSize = 15
-    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
+    Button.TextSize = 16
+    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 7)
     Button.MouseEnter:Connect(function()
-        Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        Button.BackgroundColor3 = Theme.Accent
     end)
     Button.MouseLeave:Connect(function()
         Button.BackgroundColor3 = Theme.Button
@@ -423,77 +266,154 @@ local function CreateButton(parent, text, callback, position)
     return Button
 end
 
-local function CreateToggle(parent, text, getValue, setValue, position)
+local function CreateToggle(parent, text, getValue, setValue, ypos)
     local Toggle = Instance.new("TextButton", parent)
-    Toggle.Text = text .. ": Off"
-    Toggle.Size = UDim2.new(0.92, 0, 0, 28)
-    Toggle.Position = position
-    Toggle.BackgroundColor3 = Theme.Button
+    Toggle.Text = text .. ": " .. (getValue() and "ON" or "OFF")
+    Toggle.Size = UDim2.new(0.88, 0, 0, 36)
+    Toggle.Position = UDim2.new(0.06, 0, 0, ypos)
+    Toggle.BackgroundColor3 = getValue() and Theme.Accent or Theme.Button
     Toggle.TextColor3 = Theme.Text
     Toggle.Font = Enum.Font.Gotham
-    Toggle.TextSize = 15
-    Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 6)
+    Toggle.TextSize = 16
+    Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 7)
     Toggle.MouseButton1Click:Connect(function()
         local newValue = not getValue()
         setValue(newValue)
-        Toggle.Text = text .. ": " .. (newValue and "On" or "Off")
-        Toggle.BackgroundColor3 = newValue and Color3.fromRGB(34, 177, 76) or Theme.Button
+        Toggle.Text = text .. ": " .. (newValue and "ON" or "OFF")
+        Toggle.BackgroundColor3 = newValue and Theme.Accent or Theme.Button
     end)
     return Toggle
 end
 
--- MAIN TAB
-local MainTab = CreateTab("Main")
-CreateToggle(MainTab, "Auto Harvest", function() return tog.harvest end, function(v) tog.harvest = v end, UDim2.new(0.05, 0, 0, 5))
-CreateToggle(MainTab, "Auto Sell", function() return tog.sell end, function(v) tog.sell = v end, UDim2.new(0.05, 0, 0, 38))
-CreateToggle(MainTab, "Wander", function() return tog.wander end, function(v) tog.wander = v end, UDim2.new(0.05, 0, 0, 71))
-CreateButton(MainTab, "Manual Sell", function()
-    local pos = hrp.CFrame
-    hrp.CFrame = workspace.Tutorial_Points.Tutorial_Point_2.CFrame
-    task.wait(.1)
-    repeat
-        GE.Sell_Inventory:FireServer()
-        task.wait(.1)
-    until not tog.sell or #plr.Backpack:GetChildren() < 200
-    hrp.CFrame = pos
-end, UDim2.new(0.05, 0, 0, 104))
-CreateToggle(MainTab, "Give Moonlit Fruits", function() return tog.moonlit end, function(v) tog.moonlit = v end, UDim2.new(0.05, 0, 0, 137))
-CreateToggle(MainTab, "Claim Daily Quest", function() return tog.daily end, function(v) tog.daily = v end, UDim2.new(0.05, 0, 0, 170))
+local function CreateDropdown(parent, label, getValue, setValue, items, ypos)
+    local Label = Instance.new("TextLabel", parent)
+    Label.Text = label .. ":"
+    Label.Size = UDim2.new(0.4, 0, 0, 28)
+    Label.Position = UDim2.new(0.06, 0, 0, ypos)
+    Label.BackgroundTransparency = 1
+    Label.TextColor3 = Theme.Text
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 15
 
--- SEEDS TAB
-local SeedsTab = CreateTab("Seeds")
-for i, v in ipairs(seeds) do
-    CreateToggle(SeedsTab, v[1], function() return v[2] end, function(n) seeds[i][2]=n end, UDim2.new(0.05, 0, 0, 5 + (i-1)*31))
+    local Drop = Instance.new("TextButton", parent)
+    Drop.Text = getValue()
+    Drop.Size = UDim2.new(0.46, 0, 0, 28)
+    Drop.Position = UDim2.new(0.5, 0, 0, ypos)
+    Drop.BackgroundColor3 = Theme.Button
+    Drop.TextColor3 = Theme.Text
+    Drop.Font = Enum.Font.Gotham
+    Drop.TextSize = 15
+    Instance.new("UICorner", Drop).CornerRadius = UDim.new(0, 7)
+
+    Drop.MouseButton1Click:Connect(function()
+        local menu = Instance.new("Frame", parent)
+        menu.Size = UDim2.new(0.46, 0, 0, #items * 26)
+        menu.Position = UDim2.new(0.5, 0, 0, ypos + 28)
+        menu.BackgroundColor3 = Theme.Background
+        menu.ZIndex = 2
+        for i, v in ipairs(items) do
+            local opt = Instance.new("TextButton", menu)
+            opt.Text = v
+            opt.Size = UDim2.new(1, 0, 0, 26)
+            opt.Position = UDim2.new(0, 0, 0, (i-1)*26)
+            opt.BackgroundColor3 = Theme.Button
+            opt.TextColor3 = Theme.Text
+            opt.Font = Enum.Font.Gotham
+            opt.TextSize = 15
+            opt.ZIndex = 3
+            Instance.new("UICorner", opt).CornerRadius = UDim.new(0, 5)
+            opt.MouseButton1Click:Connect(function()
+                setValue(v)
+                Drop.Text = v
+                menu:Destroy()
+            end)
+        end
+        menu.MouseLeave:Connect(function() menu:Destroy() end)
+    end)
 end
 
--- GEARS TAB
-local GearsTab = CreateTab("Gears")
-for i, v in ipairs(gears) do
-    CreateToggle(GearsTab, v[1], function() return v[2] end, function(n) gears[i][2]=n end, UDim2.new(0.05, 0, 0, 5 + (i-1)*31))
-end
+-- === FARM TAB ===
+local FarmTab = CreateTab("Farm")
 
--- EVENT SHOP TAB
-local EventTab = CreateTab("Event Shop")
-for i, v in ipairs(event) do
-    CreateToggle(EventTab, v[1], function() return v[2] end, function(n) event[i][2]=n end, UDim2.new(0.05, 0, 0, 5 + (i-1)*31))
-end
+local ypos = 12
+CreateDropdown(FarmTab, "Seed", function() return selected_seed end, function(v) selected_seed = v end, seedsList, ypos)
+ypos = ypos + 38
 
--- PETS TAB
-local PetsTab = CreateTab("Pets")
-CreateToggle(PetsTab, "Buy Eggs", function() return tog.eggs end, function(v) tog.eggs = v end, UDim2.new(0.05, 0, 0, 5))
-CreateToggle(PetsTab, "Feed", function() return tog.feed end, function(v) tog.feed = v end, UDim2.new(0.05, 0, 0, 38))
+CreateButton(FarmTab, "Set Plant Position (use where you stand)", function()
+    local character = localPlayer.Character
+    local root_part = character and character:FindFirstChild("HumanoidRootPart")
+    if root_part then
+        plant_position = root_part.Position
+        Title.Text = "🌱 Position set: " .. tostring(plant_position)
+        task.delay(1.5, function() Title.Text = "🌱 Grow-a-Garden Hub" end)
+    end
+end, ypos)
+ypos = ypos + 44
 
--- LOCAL TAB
-local LocalTab = CreateTab("Local Player")
-CreateToggle(LocalTab, "Inf Jump", function() return tog.infj end, function(v) tog.infj = v end, UDim2.new(0.05, 0, 0, 5))
-CreateToggle(LocalTab, "TP Walk", function() return tog.tpw end, function(v) tog.tpw = v end, UDim2.new(0.05, 0, 0, 38))
+CreateToggle(FarmTab, "Autobuy Seed", function() return settings.auto_buy_seeds end, function(v) settings.auto_buy_seeds = v end, ypos)
+ypos = ypos + 38
 
--- ESP TAB
-local EspTab = CreateTab("ESP")
-CreateToggle(EspTab, "Enable ESP", function() return tog.esp end, function(v) tog.esp = v rerender() end, UDim2.new(0.05, 0, 0, 5))
--- You can add more ESP filter toggles here if you want
+CreateToggle(FarmTab, "Autoplant", function() return is_auto_planting end, function(v)
+    is_auto_planting = v
+    if v then
+        task.spawn(auto_plant_seeds, selected_seed)
+    end
+end, ypos)
+ypos = ypos + 38
 
--- Drag main frame
+CreateToggle(FarmTab, "Autocollect", function() return is_auto_collecting end, function(v)
+    is_auto_collecting = v
+    if v then
+        task.spawn(auto_collect_fruits)
+    end
+end, ypos)
+ypos = ypos + 38
+
+CreateToggle(FarmTab, "Collect Nearest Fruit", function() return settings.collect_nearest_fruit end, function(v) settings.collect_nearest_fruit = v end, ypos)
+ypos = ypos + 38
+
+CreateToggle(FarmTab, "Use Distance Check", function() return settings.use_distance_check end, function(v) settings.use_distance_check = v end, ypos)
+ypos = ypos + 38
+
+-- Collection Distance Slider (simple ugly implementation)
+local sliderLabel = Instance.new("TextLabel", FarmTab)
+sliderLabel.Text = "Collection Distance: " .. tostring(settings.collection_distance)
+sliderLabel.Size = UDim2.new(0.7, 0, 0, 28)
+sliderLabel.Position = UDim2.new(0.06, 0, 0, ypos)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.TextColor3 = Theme.Text
+sliderLabel.Font = Enum.Font.Gotham
+sliderLabel.TextSize = 15
+
+local slider = Instance.new("TextButton", FarmTab)
+slider.Text = "+"
+slider.Size = UDim2.new(0.09, 0, 0, 28)
+slider.Position = UDim2.new(0.76, 0, 0, ypos)
+slider.BackgroundColor3 = Theme.Button
+slider.TextColor3 = Theme.Accent
+slider.Font = Enum.Font.Gotham
+slider.TextSize = 17
+Instance.new("UICorner", slider).CornerRadius = UDim.new(0, 7)
+slider.MouseButton1Click:Connect(function()
+    settings.collection_distance = math.min(settings.collection_distance + 1, 30)
+    sliderLabel.Text = "Collection Distance: " .. tostring(settings.collection_distance)
+end)
+
+local slider2 = Instance.new("TextButton", FarmTab)
+slider2.Text = "-"
+slider2.Size = UDim2.new(0.09, 0, 0, 28)
+slider2.Position = UDim2.new(0.66, 0, 0, ypos)
+slider2.BackgroundColor3 = Theme.Button
+slider2.TextColor3 = Theme.Accent
+slider2.Font = Enum.Font.Gotham
+slider2.TextSize = 17
+Instance.new("UICorner", slider2).CornerRadius = UDim.new(0, 7)
+slider2.MouseButton1Click:Connect(function()
+    settings.collection_distance = math.max(settings.collection_distance - 1, 1)
+    sliderLabel.Text = "Collection Distance: " .. tostring(settings.collection_distance)
+end)
+
+-- === DRAGGABLE UI ===
 local dragging = false
 local dragStart, startPos, dragInput
 MainFrame.InputBegan:Connect(function(input)
@@ -513,7 +433,7 @@ MainFrame.InputEnded:Connect(function(input)
         dragging = false
     end
 end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
     if dragging and input == dragInput then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(
@@ -524,3 +444,16 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
         )
     end
 end)
+
+-- === SET PLANT POSITION DEFAULT ===
+local farm = get_player_farm()
+if farm and farm.Important and farm.Important.Plant_Locations then
+    local default_plant_location = farm.Important.Plant_Locations:FindFirstChildOfClass("Part")
+    if default_plant_location then
+        plant_position = default_plant_location.Position
+    else
+        plant_position = Vector3.new(0,0,0)
+    end
+else
+    plant_position = Vector3.new(0,0,0)
+end
