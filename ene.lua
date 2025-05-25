@@ -249,8 +249,11 @@ if not success then
     warn("Error in tweenMovement: " .. errorMessage)
 end
 
--- Main collect/drop loop with logic: within 15 = collect, <500 = tween, else TP
-while #foundItems > 0 do
+-- Limit of 40 stores, then drop and end
+local storeCount = 0
+local reachedLimit = false
+
+while #foundItems > 0 and not reachedLimit do
     for i = #foundItems, 1, -1 do
         local pos = foundItems[i]
         local runtime = Workspace:FindFirstChild("RuntimeItems")
@@ -286,13 +289,33 @@ while #foundItems > 0 do
             end
             wasStored[itemToCollect] = true
             table.remove(foundItems, i)
+            storeCount = storeCount + 1
             dropIfFull()
             task.wait(0.5)
+            if storeCount >= 40 then
+                reachedLimit = true
+                break
+            end
         else
             table.remove(foundItems, i)
         end
     end
     scanForValuables()
+end
+
+-- After reaching limit, drop everything and end script
+if storeCount >= 40 then
+    pauseHiding = true
+    TPTo(storageLocation)
+    local sackCount = isFull()
+    if sackCount then
+        FireDrop(sackCount)
+    end
+    task.wait(0.3)
+    TPTo(Vector3.new(57, 5, 29980))
+    task.wait(0.3)
+    hiding = false
+    return -- end script
 end
 
 dropIfFull()
