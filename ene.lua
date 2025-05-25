@@ -205,7 +205,7 @@ end
 
 local x, y = 57, 3
 local startZ, endZ, stepZ = 30000, -49032.99, -2000
-local duration = 0.5
+local duration = 0.7
 
 local function scanForValuables()
     local runtime = Workspace:FindFirstChild("RuntimeItems")
@@ -309,7 +309,7 @@ if storeCount >= 40 then
     hiding = false -- Stop hiding visuals coroutine
     TPTo(storageLocation)
     dropIfFull()
-    task.wait(0.3)
+    task.wait(1.2)
     return -- end script
 end
 
