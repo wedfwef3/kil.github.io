@@ -19,7 +19,7 @@ local sackCapacity = 10 -- Set to 15 if needed
 
 local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
 local hiding = false
-local pauseHiding = false -- Flag to pause hiding when dropping
+local pauseHiding = false
 
 local function isInRuntimeItems(instance)
     if not runtimeItems then return false end
@@ -167,18 +167,16 @@ end
 local function dropIfFull()
     local sackCount = isFull()
     if sackCount then
-        pauseHiding = true -- Pause hiding before teleport
+        pauseHiding = true
         TPTo(storageLocation)
         FireDrop(sackCount)
         task.wait(0.2)
-        -- Teleport away BEFORE resuming hiding, to avoid falling through the floor
-        TPTo(Vector3.new(57, 5, 29980)) -- You can adjust this location as needed
+        TPTo(Vector3.new(57, 5, 29980))
         task.wait(0.2)
-        pauseHiding = false -- Resume hiding after safe teleport
+        pauseHiding = false
     end
 end
 
--- Sit on MaximGun, TPing to -9000 if not found
 while true do
     local seat = getSeat()
     if not seat then
@@ -194,8 +192,7 @@ end
 task.wait(1)
 UseSack()
 
--- Tween sweep and track valuables
-local foundItems = {} -- Only stores Vector3s
+local foundItems = {}
 
 local function alreadyTracked(pos)
     for _, v in ipairs(foundItems) do
@@ -252,11 +249,10 @@ if not success then
     warn("Error in tweenMovement: " .. errorMessage)
 end
 
--- Main collect/drop loop
+-- Main collect/drop loop with distance check before TP
 while #foundItems > 0 do
     for i = #foundItems, 1, -1 do
         local pos = foundItems[i]
-        -- Find the item at this position
         local runtime = Workspace:FindFirstChild("RuntimeItems")
         local itemToCollect = nil
         if runtime then
@@ -268,23 +264,27 @@ while #foundItems > 0 do
             end
         end
         if itemToCollect then
-            -- TP 5 studs below the valuable item
-            TPTo(Vector3.new(pos.X, pos.Y - 5, pos.Z))
-            UseSack()
-            FireStore(itemToCollect)
+            local dist = (hrp.Position - pos).Magnitude
+            if dist > 15 then
+                -- TP 5 studs below the valuable item if not close enough
+                TPTo(Vector3.new(pos.X, pos.Y - 5, pos.Z))
+                UseSack()
+                FireStore(itemToCollect)
+            else
+                -- If already close, just collect without TP
+                UseSack()
+                FireStore(itemToCollect)
+            end
             wasStored[itemToCollect] = true
             table.remove(foundItems, i)
             dropIfFull()
             task.wait(0.4)
         else
-            -- If not found at position, remove from list to avoid infinite loop
             table.remove(foundItems, i)
         end
     end
-    -- Scan again in case new items spawned while collecting
     scanForValuables()
 end
 
--- Final drop if any remaining
 dropIfFull()
 hiding = false
