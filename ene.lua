@@ -21,6 +21,16 @@ local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
 local hiding = false
 local pauseHiding = false
 
+local scanPositions = {
+    Vector3.new(57, -5, -9000),
+    Vector3.new(57, -5, 21959),
+    Vector3.new(57, -5, 13973),
+    Vector3.new(57, -5, 6025),
+    Vector3.new(57, -5, -17737),
+    Vector3.new(57, -5, -25870),
+    Vector3.new(57, -5, -33844)
+}
+
 local function isInRuntimeItems(instance)
     if not runtimeItems then return false end
     return instance:IsDescendantOf(runtimeItems)
@@ -192,6 +202,7 @@ end
 task.wait(1)
 UseSack()
 
+-- SCANNING PROCESS: TP to each scan position, wait, record valuables
 local foundItems = {}
 
 local function alreadyTracked(pos)
@@ -202,10 +213,6 @@ local function alreadyTracked(pos)
     end
     return false
 end
-
-local x, y = 57, 3
-local startZ, endZ, stepZ = 30000, -49032.99, -1750
-local duration = 0.6
 
 local function scanForValuables()
     local runtime = Workspace:FindFirstChild("RuntimeItems")
@@ -220,38 +227,16 @@ local function scanForValuables()
     end
 end
 
-local function tweenMovementAndTrack()
-    local currentZ = startZ
-    while currentZ >= endZ do
-        local startCFrame = CFrame.new(x, y, currentZ)
-        local endCFrame = CFrame.new(x, y, currentZ + stepZ)
-
-        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = endCFrame})
-        tween:Play()
-
-        local tweenRunning = true
-        local conn = nil
-        conn = game:GetService("RunService").Heartbeat:Connect(function()
-            if tweenRunning then scanForValuables() end
-        end)
-
-        tween.Completed:Wait()
-        tweenRunning = false
-        if conn then conn:Disconnect() end
-
-        currentZ = currentZ + stepZ
-    end
+for _, pos in ipairs(scanPositions) do
+    TPTo(pos)
+    task.wait(3)
+    scanForValuables()
 end
 
-local success, errorMessage = pcall(tweenMovementAndTrack)
-if not success then
-    warn("Error in tweenMovement: " .. errorMessage)
-end
-
--- Limit of 40 stores, then drop and end
+-- Now begin the normal collection loop WITH ORIGINAL LOGIC
 local storeCount = 0
 local reachedLimit = false
+local duration = 0.5
 
 while #foundItems > 0 and not reachedLimit do
     for i = #foundItems, 1, -1 do
@@ -260,7 +245,9 @@ while #foundItems > 0 and not reachedLimit do
         local itemToCollect = nil
         if runtime then
             for _, item in ipairs(runtime:GetChildren()) do
-                if item:IsA("Model") and table.find(targetNames, item.Name) and item.PrimaryPart and (item.PrimaryPart.Position - pos).Magnitude < 1 and not wasStored[item] then
+                if item:IsA("Model") and table.find(targetNames, item.Name)
+                   and item.PrimaryPart and (item.PrimaryPart.Position - pos).Magnitude < 1
+                   and not wasStored[item] then
                     itemToCollect = item
                     break
                 end
@@ -270,11 +257,9 @@ while #foundItems > 0 and not reachedLimit do
             local dist = (hrp.Position - pos).Magnitude
             local targetPos = Vector3.new(pos.X, pos.Y - 5, pos.Z)
             if dist <= 15 then
-                -- Already close, just collect
                 UseSack()
                 FireStore(itemToCollect)
             elseif dist <= 500 then
-                -- Tween if within 500 studs
                 local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
                 local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
                 tween:Play()
@@ -282,7 +267,6 @@ while #foundItems > 0 and not reachedLimit do
                 UseSack()
                 FireStore(itemToCollect)
             else
-                -- TP if farther than 500 studs
                 TPTo(targetPos)
                 UseSack()
                 FireStore(itemToCollect)
@@ -303,15 +287,12 @@ while #foundItems > 0 and not reachedLimit do
     scanForValuables()
 end
 
--- After reaching limit, drop everything and end script
+-- After reaching limit, drop everything, stop hiding, and end script
 if storeCount >= 40 then
     pauseHiding = true
-    hiding = false -- Stop hiding visuals coroutine
+    hiding = false -- stop hideVisuals coroutine
     TPTo(storageLocation)
-    local sackCount = isFull()
-    if sackCount and sackCount > 0 then
-        FireDrop(sackCount)
-    end
+    dropIfFull()
     task.wait(0.3)
     return -- end script
 end
