@@ -38,6 +38,7 @@ local function hideVisuals(instance)
     end
 end
 
+-- Coroutine for hiding visuals
 coroutine.wrap(function()
     task.wait(10)
     hiding = true
@@ -50,6 +51,33 @@ coroutine.wrap(function()
         task.wait(1)
     end
 end)()
+
+local function unhideAllVisuals()
+    local player = Players.LocalPlayer
+    local radius = 2000 -- Adjust as needed
+
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local origin = character.HumanoidRootPart.Position
+
+        for _, instance in ipairs(workspace:GetDescendants()) do
+            if instance:IsA("BasePart") and (instance.Position - origin).Magnitude <= radius then
+                instance.LocalTransparencyModifier = 0
+                instance.CanCollide = true
+            elseif (instance:IsA("Decal") or instance:IsA("Texture")) and instance:IsDescendantOf(workspace) then
+                local parent = instance.Parent
+                if parent and parent:IsA("BasePart") and (parent.Position - origin).Magnitude <= radius then
+                    instance.Transparency = 0
+                end
+            elseif (instance:IsA("Beam") or instance:IsA("Trail")) and instance:IsDescendantOf(workspace) then
+                local parent = instance.Parent
+                if parent and parent:IsA("BasePart") and (parent.Position - origin).Magnitude <= radius then
+                    instance.Enabled = true
+                end
+            end
+        end
+    end
+end
 
 local function TPTo(position)
     pcall(function()
@@ -270,11 +298,9 @@ while #foundItems > 0 and not reachedLimit do
             local dist = (hrp.Position - pos).Magnitude
             local targetPos = Vector3.new(pos.X, pos.Y - 5, pos.Z)
             if dist <= 15 then
-                -- Already close, just collect
                 UseSack()
                 FireStore(itemToCollect)
             elseif dist <= 500 then
-                -- Tween if within 500 studs
                 local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
                 local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
                 tween:Play()
@@ -282,7 +308,6 @@ while #foundItems > 0 and not reachedLimit do
                 UseSack()
                 FireStore(itemToCollect)
             else
-                -- TP if farther than 500 studs
                 TPTo(targetPos)
                 UseSack()
                 FireStore(itemToCollect)
@@ -303,7 +328,6 @@ while #foundItems > 0 and not reachedLimit do
     scanForValuables()
 end
 
-
 local function getSackCount()
     local sack = character:FindFirstChild("Sack") or plr.Backpack:FindFirstChild("Sack")
     if sack then
@@ -316,7 +340,7 @@ local function getSackCount()
     return 0
 end
 
--- After reaching limit, drop everything and end script
+-- After reaching limit, drop everything and unhide visuals, then end script
 if storeCount >= 40 then
     TPTo(storageLocation)
     local itemCount = getSackCount()
@@ -324,7 +348,11 @@ if storeCount >= 40 then
         FireDrop(itemCount)
     end
     task.wait(0.3)
+    hiding = false
+    unhideAllVisuals()
     return -- end script
 end
 
 dropIfFull()
+hiding = false
+unhideAllVisuals()
