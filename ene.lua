@@ -1,75 +1,37 @@
--- GROW-A-GARDEN FULL MODERN UI SCRIPT
--- Includes: Farm (autobuy/autoplant, your farm only), Seeds, Gears, Event Shop, Pets, Local, ESP
 
-local Players = game:GetService("Players")
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
+local UserInputService = game:GetService("UserInputService")
 local localPlayer = Players.LocalPlayer
-local playerGui = localPlayer:WaitForChild("PlayerGui")
 
--- === SHARED STATE ===
-local tog = {
-	sell=false,moonlit=false,harvest=false,tpw=false,infj=false,wander=false,hideplants=false,
-	eggs=false,feed=false,esp=false,daily=false
-}
+-- === SEED LIST ===
 local seeds = {
-	{"Carrot",false},{"Strawberry",false},{"Blueberry",false},{"Orange Tulip",false},{"Tomato",false},{"Corn",false},
-	{"Daffodil",false},{"Watermelon",false},{"Pumpkin",false},{"Apple",false},{"Bamboo",false},{"Coconut",false},
-	{"Cactus",false},{"Dragon Fruit",false},{"Mango",false},{"Grape",false},{"Mushroom",false},{"Pepper",false},
-	{"Cacao",false},{"Beanstalk",false},
+    "Carrot","Strawberry","Blueberry","Orange Tulip","Tomato","Corn",
+    "Daffodil","Watermelon","Pumpkin","Apple","Bamboo","Coconut",
+    "Cactus","Dragon Fruit","Mango","Grape","Mushroom","Pepper",
+    "Cacao","Beanstalk"
 }
-local gears = {
-	{"Watering Can",false},{"Trowel",false},{"Recall Wrench",false},{"Basic Sprinkler",false},{"Advanced Sprinkler",false},
-	{"Godly Sprinkler",false},{"Lightning Rod",false},{"Master Sprinkler",false},
-}
-local event = {
-	{"Mysterious Crate",false},{"Night Egg",false},{"Night Seed Pack",false},{"Blood Banana",false},{"Moon Melon",false},
-	{"Star Caller",false},{"Blood Hedgehog",false},{"Blood Kiwi",false},{"Blood Owl",false},
-}
-local cd = {
-	harvest=true,seeds=true,gears=true,evshop=true,sell=true,moonlit=true,wander=true,hideplants=true,
-	eggs=true,esp=true,daily=true
-}
-local vals = {
-	tpws=5,
-	harvestmode="Aura",
-	esp={
-		gold=false,rgb=false,shock=false,wet=false,moonlit=false,
-		bloodlit=false,celestial=false,frozen=false,chilled=false
-	}
-}
-local binds = {}
-
--- === FARM DETECTION ===
-local function get_my_farm()
-	for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
-		local important = farm:FindFirstChild("Important")
-		local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
-		if ownerVal and ownerVal.Value == localPlayer.Name then
-			return farm
-		end
-	end
-	return nil
-end
 
 -- === UI THEME ===
 local Theme = {
-    Background = Color3.fromRGB(15, 15, 15),
-    Button = Color3.fromRGB(30, 30, 30),
-    Text = Color3.fromRGB(255, 255, 255),
-    Accent = Color3.fromRGB(56, 132, 255),
+    Background = Color3.fromRGB(18,18,18),
+    Button = Color3.fromRGB(29,29,29),
+    Text = Color3.fromRGB(255,255,255),
+    Accent = Color3.fromRGB(87,180,255),
+    Accent2 = Color3.fromRGB(50,120,255),
 }
 
 -- === UI ROOT ===
+local playerGui = localPlayer:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui", playerGui)
-screenGui.Name = "GardenModernTabbedUI"
+screenGui.Name = "GardenAutoFarmUI"
 
 local MainFrame = Instance.new("Frame", screenGui)
-MainFrame.Size = UDim2.new(0, 540, 0, 340)
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Size = UDim2.new(0, 480, 0, 350)
+MainFrame.Position = UDim2.new(0.5,0,0.5,0)
+MainFrame.AnchorPoint = Vector2.new(0.5,0.5)
 MainFrame.BackgroundColor3 = Theme.Background
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
@@ -84,53 +46,50 @@ RunService.RenderStepped:Connect(function()
 end)
 
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Text = "🌱 Grow-a-Garden Hub"
-Title.Size = UDim2.new(1, -30, 0, 32)
-Title.Position = UDim2.new(0, 18, 0, 10)
+Title.Text = "🌱 Grow-a-Garden Auto Hub"
+Title.Size = UDim2.new(1, -20, 0, 32)
+Title.Position = UDim2.new(0, 12, 0, 8)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = Theme.Text
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 21
+Title.TextSize = 22
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
+-- === TABS ===
 local TabsFrame = Instance.new("Frame", MainFrame)
-TabsFrame.Size = UDim2.new(0, 140, 1, -50)
-TabsFrame.Position = UDim2.new(0, 14, 0, 46)
+TabsFrame.Size = UDim2.new(0, 120, 1, -48)
+TabsFrame.Position = UDim2.new(0, 10, 0, 44)
 TabsFrame.BackgroundColor3 = Theme.Button
-TabsFrame.ClipsDescendants = true
-Instance.new("UICorner", TabsFrame).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", TabsFrame).CornerRadius = UDim.new(0, 8)
 
 local TabsScroll = Instance.new("ScrollingFrame", TabsFrame)
 TabsScroll.Size = UDim2.new(1, 0, 1, 0)
-TabsScroll.Position = UDim2.new(0, 0, 0, 0)
 TabsScroll.BackgroundTransparency = 1
 TabsScroll.ScrollBarThickness = 6
-TabsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 TabsScroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
 TabsScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 TabsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+TabsScroll.CanvasSize = UDim2.new(1,0,0,0)
 
 local TabContentFrame = Instance.new("Frame", MainFrame)
-TabContentFrame.Size = UDim2.new(1, -170, 1, -50)
-TabContentFrame.Position = UDim2.new(0, 160, 0, 46)
+TabContentFrame.Size = UDim2.new(1, -140, 1, -48)
+TabContentFrame.Position = UDim2.new(0, 130, 0, 44)
 TabContentFrame.BackgroundColor3 = Theme.Background
-TabContentFrame.ClipsDescendants = true
-Instance.new("UICorner", TabContentFrame).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", TabContentFrame).CornerRadius = UDim.new(0, 8)
 
 local Tabs = {}
 local TabButtons = {}
 local function CreateTab(tabName)
     local TabButton = Instance.new("TextButton", TabsScroll)
     TabButton.Text = tabName
-    TabButton.Size = UDim2.new(1, -12, 0, 35)
-    TabButton.Position = UDim2.new(0, 6, 0, (#Tabs * 40))
+    TabButton.Size = UDim2.new(1, -10, 0, 32)
+    TabButton.Position = UDim2.new(0, 5, 0, (#Tabs * 36))
     TabButton.BackgroundColor3 = Theme.Button
     TabButton.TextColor3 = Theme.Text
     TabButton.Font = Enum.Font.GothamBold
     TabButton.TextSize = 17
-    TabButton.AutoButtonColor = true
     Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 7)
-    TabsScroll.CanvasSize = UDim2.new(0, 0, 0, (#Tabs + 1) * 40 + 8)
+    TabsScroll.CanvasSize = UDim2.new(0, 0, 0, (#Tabs + 1) * 36 + 10)
     local TabFrame = Instance.new("Frame", TabContentFrame)
     TabFrame.Size = UDim2.new(1, 0, 1, 0)
     TabFrame.Visible = (#Tabs == 0)
@@ -152,137 +111,255 @@ local function CreateTab(tabName)
     return TabFrame
 end
 
-local function CreateButton(parent, text, callback, position)
-    local Button = Instance.new("TextButton", parent)
-    Button.Text = text
-    Button.Size = UDim2.new(0.92, 0, 0, 32)
-    Button.Position = position
-    Button.BackgroundColor3 = Theme.Button
-    Button.TextColor3 = Theme.Text
-    Button.Font = Enum.Font.Gotham
-    Button.TextSize = 15
-    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
-    Button.MouseEnter:Connect(function()
-        Button.BackgroundColor3 = Theme.Accent
+-- === AUTOBUY TAB ===
+local AutobuyTab = CreateTab("Autobuy")
+local autobuy_selected = {}
+for i, seed in ipairs(seeds) do
+    autobuy_selected[seed] = false
+end
+local autobuy_running = false
+local autobuy_toggle
+
+local AutobuyLabel = Instance.new("TextLabel", AutobuyTab)
+AutobuyLabel.Text = "Select seeds to autobuy:"
+AutobuyLabel.Size = UDim2.new(1, -20, 0, 28)
+AutobuyLabel.Position = UDim2.new(0,10,0,6)
+AutobuyLabel.BackgroundTransparency = 1
+AutobuyLabel.TextColor3 = Theme.Text
+AutobuyLabel.Font = Enum.Font.GothamBold
+AutobuyLabel.TextSize = 16
+AutobuyLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local Scroll = Instance.new("ScrollingFrame", AutobuyTab)
+Scroll.Size = UDim2.new(0.55, 0, 0, 170)
+Scroll.Position = UDim2.new(0, 10, 0, 40)
+Scroll.CanvasSize = UDim2.new(0,0,0,#seeds*30)
+Scroll.BackgroundColor3 = Theme.Button
+Scroll.ScrollBarThickness = 5
+Scroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", Scroll).CornerRadius = UDim.new(0, 5)
+
+local checkboxes = {}
+for i, seed in ipairs(seeds) do
+    local cb = Instance.new("TextButton", Scroll)
+    cb.Size = UDim2.new(1, -8, 0, 26)
+    cb.Position = UDim2.new(0, 4, 0, (i-1)*28)
+    cb.BackgroundColor3 = Theme.Button
+    cb.TextColor3 = Theme.Text
+    cb.Font = Enum.Font.Gotham
+    cb.TextSize = 15
+    cb.Text = "[  ] " .. seed
+    checkboxes[seed] = cb
+
+    cb.MouseButton1Click:Connect(function()
+        autobuy_selected[seed] = not autobuy_selected[seed]
+        cb.Text = autobuy_selected[seed] and "[✔] "..seed or "[  ] "..seed
+        cb.BackgroundColor3 = autobuy_selected[seed] and Theme.Accent or Theme.Button
     end)
-    Button.MouseLeave:Connect(function()
-        Button.BackgroundColor3 = Theme.Button
-    end)
-    Button.MouseButton1Click:Connect(callback)
-    return Button
 end
 
-local function CreateToggle(parent, text, getValue, setValue, position)
-    local Toggle = Instance.new("TextButton", parent)
-    Toggle.Text = text .. ": " .. (getValue() and "ON" or "OFF")
-    Toggle.Size = UDim2.new(0.92, 0, 0, 32)
-    Toggle.Position = position
-    Toggle.BackgroundColor3 = getValue() and Theme.Accent or Theme.Button
-    Toggle.TextColor3 = Theme.Text
-    Toggle.Font = Enum.Font.Gotham
-    Toggle.TextSize = 15
-    Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 6)
-    Toggle.MouseButton1Click:Connect(function()
-        local newValue = not getValue()
-        setValue(newValue)
-        Toggle.Text = text .. ": " .. (newValue and "ON" or "OFF")
-        Toggle.BackgroundColor3 = newValue and Theme.Accent or Theme.Button
-    end)
-    return Toggle
-end
-
--- === FARM TAB (FIRST TAB!) ===
-local FarmTab = CreateTab("Farm")
-local farm_y = 8
-for i, v in ipairs(seeds) do
-    CreateToggle(FarmTab, v[1], function() return v[2] end, function(state) seeds[i][2] = state end, UDim2.new(0.05, 0, 0, farm_y))
-    farm_y = farm_y + 34
-end
-
-CreateButton(FarmTab, "Buy All Enabled Seeds", function()
-    for _, v in ipairs(seeds) do
-        if v[2] then
-            ReplicatedStorage.GameEvents.BuySeedStock:FireServer(v[1])
+local function get_autobuy_list()
+    local t = {}
+    for _, seed in ipairs(seeds) do
+        if autobuy_selected[seed] then
+            table.insert(t, seed)
         end
     end
-end, UDim2.new(0.05, 0, 0, farm_y))
-farm_y = farm_y + 38
+    return t
+end
 
-CreateButton(FarmTab, "Plant All Enabled Seeds (My Farm)", function()
-    local myFarm = get_my_farm()
-    if not myFarm then
-        warn("Your farm not found!")
-        return
-    end
-    local plantLocations = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plant_Locations")
-    if not plantLocations then
-        warn("No plant locations in your farm!")
-        return
-    end
-    for _, v in ipairs(seeds) do
-        if v[2] then
-            for _, spot in ipairs(plantLocations:GetChildren()) do
-                if spot:IsA("BasePart") then
-                    ReplicatedStorage.GameEvents.Plant_RE:FireServer(spot.Position, v[1])
-                    task.wait(0.05)
+autobuy_toggle = Instance.new("TextButton", AutobuyTab)
+autobuy_toggle.Size = UDim2.new(0.36, 0, 0, 38)
+autobuy_toggle.Position = UDim2.new(0.6, 0, 0, 40)
+autobuy_toggle.BackgroundColor3 = Theme.Button
+autobuy_toggle.TextColor3 = Theme.Text
+autobuy_toggle.Font = Enum.Font.GothamBold
+autobuy_toggle.TextSize = 17
+autobuy_toggle.Text = "Start Autobuy"
+Instance.new("UICorner", autobuy_toggle).CornerRadius = UDim.new(0, 7)
+
+-- AUTOBUY LOOP
+local autobuy_thread
+autobuy_toggle.MouseButton1Click:Connect(function()
+    if not autobuy_running then
+        autobuy_running = true
+        autobuy_toggle.Text = "Stop Autobuy"
+        autobuy_toggle.BackgroundColor3 = Theme.Accent2
+        autobuy_thread = task.spawn(function()
+            while autobuy_running do
+                local list = get_autobuy_list()
+                for _, seed in ipairs(list) do
+                    ReplicatedStorage.GameEvents.BuySeedStock:FireServer(seed)
+                    task.wait(0.12)
                 end
+                task.wait(2)
             end
+        end)
+    else
+        autobuy_running = false
+        autobuy_toggle.Text = "Start Autobuy"
+        autobuy_toggle.BackgroundColor3 = Theme.Button
+    end
+end)
+
+-- === AUTOPLANT TAB ===
+local AutoplantTab = CreateTab("Autoplant")
+local autoplant_selected = {}
+for i, seed in ipairs(seeds) do
+    autoplant_selected[seed] = false
+end
+local autoplant_running = false
+local autoplant_toggle
+
+local AutoplantLabel = Instance.new("TextLabel", AutoplantTab)
+AutoplantLabel.Text = "Select seeds to autoplant:"
+AutoplantLabel.Size = UDim2.new(1, -20, 0, 28)
+AutoplantLabel.Position = UDim2.new(0,10,0,6)
+AutoplantLabel.BackgroundTransparency = 1
+AutoplantLabel.TextColor3 = Theme.Text
+AutoplantLabel.Font = Enum.Font.GothamBold
+AutoplantLabel.TextSize = 16
+AutoplantLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local ScrollPlant = Instance.new("ScrollingFrame", AutoplantTab)
+ScrollPlant.Size = UDim2.new(0.55, 0, 0, 170)
+ScrollPlant.Position = UDim2.new(0, 10, 0, 40)
+ScrollPlant.CanvasSize = UDim2.new(0,0,0,#seeds*30)
+ScrollPlant.BackgroundColor3 = Theme.Button
+ScrollPlant.ScrollBarThickness = 5
+ScrollPlant.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+ScrollPlant.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", ScrollPlant).CornerRadius = UDim.new(0, 5)
+
+local checkboxes_plant = {}
+for i, seed in ipairs(seeds) do
+    local cb = Instance.new("TextButton", ScrollPlant)
+    cb.Size = UDim2.new(1, -8, 0, 26)
+    cb.Position = UDim2.new(0, 4, 0, (i-1)*28)
+    cb.BackgroundColor3 = Theme.Button
+    cb.TextColor3 = Theme.Text
+    cb.Font = Enum.Font.Gotham
+    cb.TextSize = 15
+    cb.Text = "[  ] " .. seed
+    checkboxes_plant[seed] = cb
+
+    cb.MouseButton1Click:Connect(function()
+        autoplant_selected[seed] = not autoplant_selected[seed]
+        cb.Text = autoplant_selected[seed] and "[✔] "..seed or "[  ] "..seed
+        cb.BackgroundColor3 = autoplant_selected[seed] and Theme.Accent or Theme.Button
+    end)
+end
+
+local function get_autoplant_list()
+    local t = {}
+    for _, seed in ipairs(seeds) do
+        if autoplant_selected[seed] then
+            table.insert(t, seed)
         end
     end
-end, UDim2.new(0.05, 0, 0, farm_y))
-farm_y = farm_y + 38
+    return t
+end
 
-CreateButton(FarmTab, "Plant All Enabled Seeds (at your Position)", function()
-    local pos = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") and localPlayer.Character.HumanoidRootPart.Position
-    if not pos then return end
-    for _, v in ipairs(seeds) do
-        if v[2] then
-            ReplicatedStorage.GameEvents.Plant_RE:FireServer(pos, v[1])
-            task.wait(0.05)
+autoplant_toggle = Instance.new("TextButton", AutoplantTab)
+autoplant_toggle.Size = UDim2.new(0.36, 0, 0, 38)
+autoplant_toggle.Position = UDim2.new(0.6, 0, 0, 40)
+autoplant_toggle.BackgroundColor3 = Theme.Button
+autoplant_toggle.TextColor3 = Theme.Text
+autoplant_toggle.Font = Enum.Font.GothamBold
+autoplant_toggle.TextSize = 17
+autoplant_toggle.Text = "Start Autoplant"
+Instance.new("UICorner", autoplant_toggle).CornerRadius = UDim.new(0, 7)
+
+local function get_my_farm()
+    for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
+        local important = farm:FindFirstChild("Important")
+        local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
+        if ownerVal and ownerVal.Value == localPlayer.Name then
+            return farm
         end
     end
-end, UDim2.new(0.05, 0, 0, farm_y))
-
--- === SEEDS TAB ===
-local SeedsTab = CreateTab("Seeds")
-local seeds_y = 5
-for i, v in ipairs(seeds) do
-    CreateToggle(SeedsTab, v[1], function() return v[2] end, function(n) seeds[i][2]=n end, UDim2.new(0.05, 0, 0, seeds_y))
-    seeds_y = seeds_y + 31
+    return nil
 end
 
--- === GEARS TAB ===
-local GearsTab = CreateTab("Gears")
-local gears_y = 5
-for i, v in ipairs(gears) do
-    CreateToggle(GearsTab, v[1], function() return v[2] end, function(n) gears[i][2]=n end, UDim2.new(0.05, 0, 0, gears_y))
-    gears_y = gears_y + 31
-end
+local autoplant_thread
+autoplant_toggle.MouseButton1Click:Connect(function()
+    if not autoplant_running then
+        autoplant_running = true
+        autoplant_toggle.Text = "Stop Autoplant"
+        autoplant_toggle.BackgroundColor3 = Theme.Accent2
+        autoplant_thread = task.spawn(function()
+            while autoplant_running do
+                local list = get_autoplant_list()
+                local myFarm = get_my_farm()
+                if myFarm then
+                    local plantLocations = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plant_Locations")
+                    if plantLocations then
+                        for _, seed in ipairs(list) do
+                            for _, spot in ipairs(plantLocations:GetChildren()) do
+                                if not autoplant_running then return end
+                                if spot:IsA("BasePart") then
+                                    ReplicatedStorage.GameEvents.Plant_RE:FireServer(spot.Position, seed)
+                                    task.wait(0.07)
+                                end
+                            end
+                        end
+                    end
+                end
+                task.wait(3)
+            end
+        end)
+    else
+        autoplant_running = false
+        autoplant_toggle.Text = "Start Autoplant"
+        autoplant_toggle.BackgroundColor3 = Theme.Button
+    end
+end)
 
--- === EVENT SHOP TAB ===
-local EventTab = CreateTab("Event Shop")
-local event_y = 5
-for i, v in ipairs(event) do
-    CreateToggle(EventTab, v[1], function() return v[2] end, function(n) event[i][2]=n end, UDim2.new(0.05, 0, 0, event_y))
-    event_y = event_y + 31
-end
+-- === AUTOSELL TAB (simple example) ===
+local AutosellTab = CreateTab("Autosell")
+local autosell_running = false
+local autosell_toggle = Instance.new("TextButton", AutosellTab)
+autosell_toggle.Size = UDim2.new(0.6, 0, 0, 38)
+autosell_toggle.Position = UDim2.new(0, 16, 0, 24)
+autosell_toggle.BackgroundColor3 = Theme.Button
+autosell_toggle.TextColor3 = Theme.Text
+autosell_toggle.Font = Enum.Font.GothamBold
+autosell_toggle.TextSize = 18
+autosell_toggle.Text = "Start Autosell"
+Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
 
--- === PETS TAB ===
-local PetsTab = CreateTab("Pets")
-CreateToggle(PetsTab, "Buy Eggs", function() return tog.eggs end, function(v) tog.eggs = v end, UDim2.new(0.05, 0, 0, 5))
-CreateToggle(PetsTab, "Feed", function() return tog.feed end, function(v) tog.feed = v end, UDim2.new(0.05, 0, 0, 38))
+local autosell_thread
+autosell_toggle.MouseButton1Click:Connect(function()
+    if not autosell_running then
+        autosell_running = true
+        autosell_toggle.Text = "Stop Autosell"
+        autosell_toggle.BackgroundColor3 = Theme.Accent2
+        autosell_thread = task.spawn(function()
+            while autosell_running do
+                local character = localPlayer.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                if hrp and localPlayer.Backpack and #localPlayer.Backpack:GetChildren() > 199 then
+                    local pos = hrp.CFrame
+                    local sellPoint = workspace:FindFirstChild("Tutorial_Points") and workspace.Tutorial_Points:FindFirstChild("Tutorial_Point_2")
+                    if sellPoint then
+                        hrp.CFrame = sellPoint.CFrame
+                        task.wait(0.3)
+                        ReplicatedStorage.GameEvents.Sell_Inventory:FireServer()
+                        hrp.CFrame = pos
+                    end
+                end
+                task.wait(2)
+            end
+        end)
+    else
+        autosell_running = false
+        autosell_toggle.Text = "Start Autosell"
+        autosell_toggle.BackgroundColor3 = Theme.Button
+    end
+end)
 
--- === LOCAL PLAYER TAB ===
-local LocalTab = CreateTab("Local Player")
-CreateToggle(LocalTab, "Inf Jump", function() return tog.infj end, function(v) tog.infj = v end, UDim2.new(0.05, 0, 0, 5))
-CreateToggle(LocalTab, "TP Walk", function() return tog.tpw end, function(v) tog.tpw = v end, UDim2.new(0.05, 0, 0, 38))
-
--- === ESP TAB ===
-local EspTab = CreateTab("ESP")
-CreateToggle(EspTab, "Enable ESP", function() return tog.esp end, function(v) tog.esp = v end, UDim2.new(0.05, 0, 0, 5))
--- Add more ESP filters here if you want
-
--- === DRAG MAIN FRAME ===
+-- === DRAGGABLE MAIN FRAME ===
 local dragging = false
 local dragStart, startPos, dragInput
 MainFrame.InputBegan:Connect(function(input)
