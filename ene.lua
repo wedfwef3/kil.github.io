@@ -294,7 +294,7 @@ while #foundItems > 0 do
             if storeCount >= 35 then
                 pauseHiding = true
                 TPTo(storageLocation)
-                task.wait(8) -- Wait for 8 seconds at storage location
+                task.wait(15) -- Wait for 8 seconds at storage location
                 TPTo(Vector3.new(57, 5, 29980))
                 task.wait(0.3)
                 pauseHiding = false
