@@ -160,7 +160,7 @@ end
 local function FireDrop(count)
     for _ = 1, count do
         ReplicatedStorage.Remotes.DropItem:FireServer()
-        task.wait(0.1)
+        task.wait(0.2)
     end
 end
 
@@ -170,9 +170,9 @@ local function dropIfFull()
         pauseHiding = true
         TPTo(storageLocation)
         FireDrop(sackCount)
-        task.wait(0.2)
+        task.wait(0.3)
         TPTo(Vector3.new(57, 5, 29980))
-        task.wait(0.2)
+        task.wait(0.3)
         pauseHiding = false
     end
 end
@@ -281,7 +281,7 @@ while #foundItems > 0 do
             wasStored[itemToCollect] = true
             table.remove(foundItems, i)
             dropIfFull()
-            task.wait(0.4)
+            task.wait(0.5)
         else
             table.remove(foundItems, i)
         end
