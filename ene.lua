@@ -249,7 +249,7 @@ if not success then
     warn("Error in tweenMovement: " .. errorMessage)
 end
 
--- Main collect/drop loop with distance check before TP or Tween
+-- Main collect/drop loop with logic: within 15 = collect, <500 = tween, else TP
 while #foundItems > 0 do
     for i = #foundItems, 1, -1 do
         local pos = foundItems[i]
@@ -266,18 +266,24 @@ while #foundItems > 0 do
         if itemToCollect then
             local dist = (hrp.Position - pos).Magnitude
             local targetPos = Vector3.new(pos.X, pos.Y - 5, pos.Z)
-            if dist > 500 then
-                -- TP if very far
-                TPTo(targetPos)
-            else
+            if dist <= 15 then
+                -- Already close, just collect
+                UseSack()
+                FireStore(itemToCollect)
+            elseif dist <= 500 then
                 -- Tween if within 500 studs
                 local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
                 local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
                 tween:Play()
                 tween.Completed:Wait()
+                UseSack()
+                FireStore(itemToCollect)
+            else
+                -- TP if farther than 500 studs
+                TPTo(targetPos)
+                UseSack()
+                FireStore(itemToCollect)
             end
-            UseSack()
-            FireStore(itemToCollect)
             wasStored[itemToCollect] = true
             table.remove(foundItems, i)
             dropIfFull()
