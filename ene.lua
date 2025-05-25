@@ -292,7 +292,7 @@ while #foundItems > 0 and not reachedLimit do
             storeCount = storeCount + 1
             dropIfFull()
             task.wait(0.5)
-            if storeCount >= 40 then
+            if storeCount >= 35 then
                 reachedLimit = true
                 break
             end
@@ -304,7 +304,7 @@ while #foundItems > 0 and not reachedLimit do
 end
 
 -- After reaching limit, drop everything and end script
-if storeCount >= 40 then
+if storeCount >= 35 then
     pauseHiding = true
     TPTo(storageLocation)
     local sackCount = isFull()
