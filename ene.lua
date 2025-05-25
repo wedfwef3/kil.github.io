@@ -38,6 +38,13 @@ local function hideVisuals(instance)
     end
 end
 
+task.spawn(function()
+    task.wait(10) -- Wait for 120 seconds before executing
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/fly.github.io/refs/heads/main/fly.lua"))()
+end)
+
+
+
 -- Coroutine for hiding visuals
 coroutine.wrap(function()
     task.wait(10)
@@ -357,7 +364,3 @@ dropIfFull()
 hiding = false
 unhideAllVisuals()
 
-task.spawn(function()
-    task.wait(10) -- Wait for 120 seconds before executing
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/fly.github.io/refs/heads/main/fly.lua"))()
-end)
