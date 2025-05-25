@@ -17,6 +17,40 @@ local storageLocation = Vector3.new(57, 5, 30000)
 local wasStored = {}
 local sackCapacity = 10 -- Set to 15 if needed
 
+local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
+local hiding = false
+local pauseHiding = false -- Flag to pause hiding when dropping
+
+local function isInRuntimeItems(instance)
+    if not runtimeItems then return false end
+    return instance:IsDescendantOf(runtimeItems)
+end
+
+local function hideVisuals(instance)
+    if isInRuntimeItems(instance) then return end
+    if instance:IsA("BasePart") then
+        instance.LocalTransparencyModifier = 1
+        instance.CanCollide = false
+    elseif instance:IsA("Decal") or instance:IsA("Texture") then
+        instance.Transparency = 1
+    elseif instance:IsA("Beam") or instance:IsA("Trail") then
+        instance.Enabled = false
+    end
+end
+
+coroutine.wrap(function()
+    task.wait(10)
+    hiding = true
+    while hiding do
+        if not pauseHiding then
+            for _, instance in ipairs(Workspace:GetDescendants()) do
+                hideVisuals(instance)
+            end
+        end
+        task.wait(1)
+    end
+end)()
+
 local function TPTo(position)
     pcall(function()
         hrp.CFrame = CFrame.new(position)
@@ -133,44 +167,16 @@ end
 local function dropIfFull()
     local sackCount = isFull()
     if sackCount then
+        pauseHiding = true -- Pause hiding before teleport
         TPTo(storageLocation)
         FireDrop(sackCount)
         task.wait(0.2)
+        -- Teleport away BEFORE resuming hiding, to avoid falling through the floor
+        TPTo(Vector3.new(57, 5, 29980)) -- You can adjust this location as needed
+        task.wait(0.2)
+        pauseHiding = false -- Resume hiding after safe teleport
     end
 end
-
--- === HIDING LOGIC ===
-local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
-local hiding = false
-
-local function isInRuntimeItems(instance)
-    if not runtimeItems then return false end
-    return instance:IsDescendantOf(runtimeItems)
-end
-
-local function hideVisuals(instance)
-    if isInRuntimeItems(instance) then return end
-    if instance:IsA("BasePart") then
-        instance.LocalTransparencyModifier = 1
-        instance.CanCollide = false
-    elseif instance:IsA("Decal") or instance:IsA("Texture") then
-        instance.Transparency = 1
-    elseif instance:IsA("Beam") or instance:IsA("Trail") then
-        instance.Enabled = false
-    end
-end
-
-coroutine.wrap(function()
-    task.wait(10)
-    hiding = true
-    while hiding do
-        for _, instance in ipairs(Workspace:GetDescendants()) do
-            hideVisuals(instance)
-        end
-        task.wait(1)
-    end
-end)()
--- === END HIDING LOGIC ===
 
 -- Sit on MaximGun, TPing to -9000 if not found
 while true do
@@ -281,4 +287,4 @@ end
 
 -- Final drop if any remaining
 dropIfFull()
-hiding = false -- Stop the hiding loop right after the last drop
+hiding = false
