@@ -204,8 +204,8 @@ local function alreadyTracked(pos)
 end
 
 local x, y = 57, 3
-local startZ, endZ, stepZ = 30000, -45032.99, -1750
-local duration = 0.8
+local startZ, endZ, stepZ = 30000, -45032.99, -2000
+local duration = 0.5
 
 local function scanForValuables()
     local runtime = Workspace:FindFirstChild("RuntimeItems")
@@ -292,7 +292,7 @@ while #foundItems > 0 and not reachedLimit do
             storeCount = storeCount + 1
             dropIfFull()
             task.wait(0.5)
-            if storeCount >= 35 then
+            if storeCount >= 40 then
                 reachedLimit = true
                 break
             end
@@ -304,13 +304,15 @@ while #foundItems > 0 and not reachedLimit do
 end
 
 -- After reaching limit, drop everything and end script
-if storeCount >= 35 then
+if storeCount >= 40 then
     pauseHiding = true
     TPTo(storageLocation)
     local sackCount = isFull()
     if sackCount then
         FireDrop(sackCount)
     end
+    task.wait(0.3)
+    TPTo(Vector3.new(57, 5, 29980))
     task.wait(0.3)
     hiding = false
     return -- end script
