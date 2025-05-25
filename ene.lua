@@ -204,7 +204,7 @@ local function alreadyTracked(pos)
 end
 
 local x, y = 57, 3
-local startZ, endZ, stepZ = 30000, -45032.99, -2000
+local startZ, endZ, stepZ = 30000, -49032.99, -2000
 local duration = 0.5
 
 local function scanForValuables()
