@@ -306,15 +306,13 @@ end
 -- After reaching limit, drop everything and end script
 if storeCount >= 40 then
     pauseHiding = true
+    hiding = false -- Stop hiding visuals coroutine
     TPTo(storageLocation)
     local sackCount = isFull()
-    if sackCount then
+    if sackCount and sackCount > 0 then
         FireDrop(sackCount)
     end
     task.wait(0.3)
-    TPTo(Vector3.new(57, 5, 29980))
-    task.wait(0.3)
-    hiding = false
     return -- end script
 end
 
