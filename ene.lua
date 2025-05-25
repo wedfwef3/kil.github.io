@@ -18,8 +18,6 @@ local wasStored = {}
 local sackCapacity = 10 -- Set to 15 if needed
 
 local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
-local hiding = false
-local pauseHiding = false
 
 local scanPositions = {
     Vector3.new(57, -5, -9000),
@@ -30,36 +28,6 @@ local scanPositions = {
     Vector3.new(57, -5, -25870),
     Vector3.new(57, -5, -33844)
 }
-
-local function isInRuntimeItems(instance)
-    if not runtimeItems then return false end
-    return instance:IsDescendantOf(runtimeItems)
-end
-
-local function hideVisuals(instance)
-    if isInRuntimeItems(instance) then return end
-    if instance:IsA("BasePart") then
-        instance.LocalTransparencyModifier = 1
-        instance.CanCollide = false
-    elseif instance:IsA("Decal") or instance:IsA("Texture") then
-        instance.Transparency = 1
-    elseif instance:IsA("Beam") or instance:IsA("Trail") then
-        instance.Enabled = false
-    end
-end
-
-coroutine.wrap(function()
-    task.wait(10)
-    hiding = true
-    while hiding do
-        if not pauseHiding then
-            for _, instance in ipairs(Workspace:GetDescendants()) do
-                hideVisuals(instance)
-            end
-        end
-        task.wait(1)
-    end
-end)()
 
 local function TPTo(position)
     pcall(function()
@@ -177,13 +145,11 @@ end
 local function dropIfFull()
     local sackCount = isFull()
     if sackCount then
-        pauseHiding = true
         TPTo(storageLocation)
         FireDrop(sackCount)
         task.wait(0.3)
         TPTo(Vector3.new(57, 5, 29980))
         task.wait(0.3)
-        pauseHiding = false
     end
 end
 
@@ -287,10 +253,8 @@ while #foundItems > 0 and not reachedLimit do
     scanForValuables()
 end
 
--- After reaching limit, drop everything, stop hiding, and end script
+-- After reaching limit, drop everything and end script
 if storeCount >= 40 then
-    pauseHiding = true
-    hiding = false -- stop hideVisuals coroutine
     TPTo(storageLocation)
     dropIfFull()
     task.wait(0.3)
@@ -298,4 +262,3 @@ if storeCount >= 40 then
 end
 
 dropIfFull()
-hiding = false
