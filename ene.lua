@@ -55,7 +55,7 @@ local function TPTo(position)
     pcall(function()
         hrp.CFrame = CFrame.new(position)
     end)
-    task.wait(0.4)
+    task.wait(0.6)
 end
 
 local function DestroyCase()
