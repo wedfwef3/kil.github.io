@@ -9,7 +9,7 @@ local hrp = character:WaitForChild("HumanoidRootPart")
 local humanoid = character:WaitForChild("Humanoid")
 
 local targetNames = {
-    "Bond", "GoldBar", "SilverBar", "Crucifix",
+    "GoldBar", "SilverBar", "Crucifix",
     "GoldStatue", "SilverStatue", "BrainJar"
 }
 
