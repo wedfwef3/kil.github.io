@@ -1,5 +1,3 @@
-
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -282,6 +280,46 @@ local function get_my_farm()
     return nil
 end
 
+local function shuffle(t)
+    local n = #t
+    for i = n, 2, -1 do
+        local j = math.random(i)
+        t[i], t[j] = t[j], t[i]
+    end
+end
+
+local function get_seed_tool(seedList)
+    -- Returns the first available seed tool from the selected seeds, or nil if none
+    for _, seedName in ipairs(seedList) do
+        -- Backpack first
+        for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
+            if item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seedName then
+                return item, seedName
+            end
+        end
+        -- Then character
+        local char = localPlayer.Character
+        if char then
+            for _, item in ipairs(char:GetChildren()) do
+                if item:IsA("Tool") and item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seedName then
+                    return item, seedName
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
+local function equip_seed(tool)
+    if tool and localPlayer.Character then
+        local humanoid = localPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid and tool.Parent ~= localPlayer.Character then
+            humanoid:EquipTool(tool)
+            task.wait(0.07)
+        end
+    end
+end
+
 local autoplant_thread
 autoplant_toggle.MouseButton1Click:Connect(function()
     if not autoplant_running then
@@ -291,22 +329,40 @@ autoplant_toggle.MouseButton1Click:Connect(function()
         autoplant_thread = task.spawn(function()
             while autoplant_running do
                 local list = get_autoplant_list()
+                if #list == 0 then
+                    task.wait(0.7)
+                    continue
+                end
                 local myFarm = get_my_farm()
                 if myFarm then
                     local plantLocations = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plant_Locations")
                     if plantLocations then
-                        for _, seed in ipairs(list) do
-                            for _, spot in ipairs(plantLocations:GetChildren()) do
-                                if not autoplant_running then return end
-                                if spot:IsA("BasePart") then
-                                    ReplicatedStorage.GameEvents.Plant_RE:FireServer(spot.Position, seed)
-                                    task.wait(0.07)
-                                end
+                        local allPlots = {}
+                        for _, plot in ipairs(plantLocations:GetChildren()) do
+                            if plot:IsA("BasePart") then
+                                table.insert(allPlots, plot)
                             end
+                        end
+                        shuffle(allPlots)
+                        while autoplant_running do
+                            local tool, seedName = get_seed_tool(list)
+                            if not tool then
+                                task.wait(0.7)
+                                break
+                            end
+                            equip_seed(tool)
+                            shuffle(allPlots)
+                            for _, spot in ipairs(allPlots) do
+                                if not autoplant_running then return end
+                                ReplicatedStorage.GameEvents.Plant_RE:FireServer(spot.Position, seedName)
+                                task.wait(0.09)
+                                break -- Plant one, then recheck inventory
+                            end
+                            task.wait(0.08)
                         end
                     end
                 end
-                task.wait(3)
+                task.wait(0.5)
             end
         end)
     else
