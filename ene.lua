@@ -575,6 +575,110 @@ autocollect_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
+
+-- === AUTOBUY GEARS TAB ===
+local gears = {
+    "Watering Can",
+    "Trowel",
+    "Recall Wrench",
+    "Basic Sprinkler",
+    "Advanced Sprinkler",
+    "Godly Sprinkler",
+    "Lightning Rod",
+    "Master Sprinkler",
+}
+local autobuy_gear_selected = {}
+for i, gear in ipairs(gears) do
+    autobuy_gear_selected[gear] = false
+end
+local autobuy_gear_running = false
+local autobuy_gear_thread
+
+local GearsTab = CreateTab("Gears")
+
+local GearsLabel = Instance.new("TextLabel", GearsTab)
+GearsLabel.Text = "Select gears to autobuy:"
+GearsLabel.Size = UDim2.new(1, -20, 0, 28)
+GearsLabel.Position = UDim2.new(0,10,0,6)
+GearsLabel.BackgroundTransparency = 1
+GearsLabel.TextColor3 = Theme.Text
+GearsLabel.Font = Enum.Font.GothamBold
+GearsLabel.TextSize = 16
+GearsLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local GearsScroll = Instance.new("ScrollingFrame", GearsTab)
+GearsScroll.Size = UDim2.new(0.55, 0, 0, 170)
+GearsScroll.Position = UDim2.new(0, 10, 0, 40)
+GearsScroll.CanvasSize = UDim2.new(0,0,0,#gears*30)
+GearsScroll.BackgroundColor3 = Theme.Button
+GearsScroll.ScrollBarThickness = 5
+GearsScroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+GearsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", GearsScroll).CornerRadius = UDim.new(0, 5)
+
+local gears_checkboxes = {}
+for i, gear in ipairs(gears) do
+    local cb = Instance.new("TextButton", GearsScroll)
+    cb.Size = UDim2.new(1, -8, 0, 26)
+    cb.Position = UDim2.new(0, 4, 0, (i-1)*28)
+    cb.BackgroundColor3 = Theme.Button
+    cb.TextColor3 = Theme.Text
+    cb.Font = Enum.Font.Gotham
+    cb.TextSize = 15
+    cb.Text = "[  ] " .. gear
+    gears_checkboxes[gear] = cb
+
+    cb.MouseButton1Click:Connect(function()
+        autobuy_gear_selected[gear] = not autobuy_gear_selected[gear]
+        cb.Text = autobuy_gear_selected[gear] and "[✔] "..gear or "[  ] "..gear
+        cb.BackgroundColor3 = autobuy_gear_selected[gear] and Theme.Accent or Theme.Button
+    end)
+end
+
+local function get_autobuy_gear_list()
+    local t = {}
+    for _, gear in ipairs(gears) do
+        if autobuy_gear_selected[gear] then
+            table.insert(t, gear)
+        end
+    end
+    return t
+end
+
+local autobuy_gear_toggle = Instance.new("TextButton", GearsTab)
+autobuy_gear_toggle.Size = UDim2.new(0.36, 0, 0, 38)
+autobuy_gear_toggle.Position = UDim2.new(0.6, 0, 0, 40)
+autobuy_gear_toggle.BackgroundColor3 = Theme.Button
+autobuy_gear_toggle.TextColor3 = Theme.Text
+autobuy_gear_toggle.Font = Enum.Font.GothamBold
+autobuy_gear_toggle.TextSize = 17
+autobuy_gear_toggle.Text = "Start Autobuy Gears"
+Instance.new("UICorner", autobuy_gear_toggle).CornerRadius = UDim.new(0, 7)
+
+autobuy_gear_toggle.MouseButton1Click:Connect(function()
+    if not autobuy_gear_running then
+        autobuy_gear_running = true
+        autobuy_gear_toggle.Text = "Stop Autobuy Gears"
+        autobuy_gear_toggle.BackgroundColor3 = Theme.Accent2
+        autobuy_gear_thread = task.spawn(function()
+            while autobuy_gear_running do
+                local list = get_autobuy_gear_list()
+                for _, gear in ipairs(list) do
+                    ReplicatedStorage.GameEvents.BuyGearStock:FireServer(gear)
+                    task.wait(0.15)
+                end
+                task.wait(2)
+            end
+        end)
+    else
+        autobuy_gear_running = false
+        autobuy_gear_toggle.Text = "Start Autobuy Gears"
+        autobuy_gear_toggle.BackgroundColor3 = Theme.Button
+    end
+end)
+
+
+
 -- === DRAGGABLE MAIN FRAME ===
 local dragging = false
 local dragStart, startPos, dragInput
