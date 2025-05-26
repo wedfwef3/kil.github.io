@@ -492,10 +492,7 @@ autosell_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Add this new tab to your modern UI script for "Autocollect"
--- This uses the modern UI style and the autoharvest logic you provided!
-
--- === AUTOCOLLECT TAB ===
+-- === AUTOCOLLECT TAB (with nearest fruit and distance check) ===
 
 local AutocollectTab = CreateTab("Autocollect")
 local autocollect_running = false
@@ -509,58 +506,119 @@ autocollect_toggle.TextSize = 18
 autocollect_toggle.Text = "Start Autocollect"
 Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
 
--- Harvest mode selector (Aura / Random / Scuffed / E Spam)
-local autocollect_mode = "Aura"
-local modeLabel = Instance.new("TextLabel", AutocollectTab)
-modeLabel.Text = "Harvest Mode:"
-modeLabel.Size = UDim2.new(0, 120, 0, 20)
-modeLabel.Position = UDim2.new(0, 16, 0, 80)
-modeLabel.BackgroundTransparency = 1
-modeLabel.TextColor3 = Theme.Text
-modeLabel.Font = Enum.Font.GothamBold
-modeLabel.TextSize = 14
-modeLabel.TextXAlignment = Enum.TextXAlignment.Left
+-- Settings for collecting
+local collect_settings = {
+    use_distance_check = true,
+    collection_distance = 17,
+    collect_nearest_fruit = true,
+}
 
-local modeDropdown = Instance.new("TextButton", AutocollectTab)
-modeDropdown.Size = UDim2.new(0,120,0,26)
-modeDropdown.Position = UDim2.new(0, 120, 0, 76)
-modeDropdown.BackgroundColor3 = Theme.Button
-modeDropdown.TextColor3 = Theme.Text
-modeDropdown.Font = Enum.Font.Gotham
-modeDropdown.TextSize = 14
-modeDropdown.Text = autocollect_mode
-Instance.new("UICorner", modeDropdown).CornerRadius = UDim.new(0, 6)
+-- Distance slider
+local distLabel = Instance.new("TextLabel", AutocollectTab)
+distLabel.Text = "Collection Distance: "..tostring(collect_settings.collection_distance)
+distLabel.Size = UDim2.new(1, -20, 0, 24)
+distLabel.Position = UDim2.new(0, 16, 0, 80)
+distLabel.BackgroundTransparency = 1
+distLabel.TextColor3 = Theme.Text
+distLabel.Font = Enum.Font.GothamBold
+distLabel.TextSize = 14
+distLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local harvest_modes = {"Aura", "Random", "Scuffed", "E Spam"}
-local modeDropdownOpen = false
-local modeDropdownFrame = Instance.new("Frame", AutocollectTab)
-modeDropdownFrame.BackgroundColor3 = Theme.Button
-modeDropdownFrame.Size = UDim2.new(0, 120, 0, #harvest_modes*22)
-modeDropdownFrame.Position = UDim2.new(0, 120, 0, 102)
-modeDropdownFrame.Visible = false
-Instance.new("UICorner", modeDropdownFrame).CornerRadius = UDim.new(0, 6)
-for i,mode in ipairs(harvest_modes) do
-    local btn = Instance.new("TextButton", modeDropdownFrame)
-    btn.Size = UDim2.new(1, 0, 0, 22)
-    btn.Position = UDim2.new(0, 0, 0, (i-1)*22)
-    btn.BackgroundColor3 = Theme.Button
-    btn.TextColor3 = Theme.Text
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 13
-    btn.Text = mode
-    btn.MouseButton1Click:Connect(function()
-        autocollect_mode = mode
-        modeDropdown.Text = mode
-        modeDropdownFrame.Visible = false
-        modeDropdownOpen = false
-    end)
+local distSliderFrame = Instance.new("Frame", AutocollectTab)
+distSliderFrame.BackgroundColor3 = Theme.Button
+distSliderFrame.Size = UDim2.new(0.9, 0, 0, 14)
+distSliderFrame.Position = UDim2.new(0, 16, 0, 104)
+Instance.new("UICorner", distSliderFrame).CornerRadius = UDim.new(0, 5)
+
+local distSliderBar = Instance.new("Frame", distSliderFrame)
+distSliderBar.BackgroundColor3 = Theme.Accent
+distSliderBar.Size = UDim2.new(0, 12, 1, 0)
+distSliderBar.Position = UDim2.new((collect_settings.collection_distance-1)/29, -6, 0.5, 0)
+distSliderBar.AnchorPoint = Vector2.new(0, 0.5)
+Instance.new("UICorner", distSliderBar).CornerRadius = UDim.new(0, 6)
+
+local draggingDistSlider = false
+local function setDistSliderFromX(x)
+    local left = distSliderFrame.AbsolutePosition.X
+    local width = distSliderFrame.AbsoluteSize.X
+    local rel = math.clamp((x - left) / width, 0, 1)
+    collect_settings.collection_distance = math.floor(1 + rel * 29 + 0.5)
+    local barPos = rel * width - distSliderBar.Size.X.Offset/2
+    distSliderBar.Position = UDim2.new(0, barPos, 0.5, 0)
+    distLabel.Text = "Collection Distance: "..tostring(collect_settings.collection_distance)
 end
-modeDropdown.MouseButton1Click:Connect(function()
-    modeDropdownOpen = not modeDropdownOpen
-    modeDropdownFrame.Visible = modeDropdownOpen
+
+local function beginDistDrag(input)
+    draggingDistSlider = true
+    setDistSliderFromX(input.Position.X)
+end
+local function endDistDrag()
+    draggingDistSlider = false
+end
+
+distSliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        beginDistDrag(input)
+    end
+end)
+distSliderFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        endDistDrag()
+    end
+end)
+distSliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        beginDistDrag(input)
+    end
+end)
+distSliderBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        endDistDrag()
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingDistSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        setDistSliderFromX(input.Position.X)
+    end
 end)
 
--- Autocollect main logic
+-- Checkbox for 'Nearest Fruit Only'
+local nearestCheckbox = Instance.new("TextButton", AutocollectTab)
+nearestCheckbox.Size = UDim2.new(0, 160, 0, 22)
+nearestCheckbox.Position = UDim2.new(0, 16, 0, 130)
+nearestCheckbox.BackgroundColor3 = Theme.Button
+nearestCheckbox.TextColor3 = Theme.Text
+nearestCheckbox.Font = Enum.Font.Gotham
+nearestCheckbox.TextSize = 14
+nearestCheckbox.Text = "[✔] Collect Nearest Only"
+local nearestOn = true
+Instance.new("UICorner", nearestCheckbox).CornerRadius = UDim.new(0, 6)
+nearestCheckbox.MouseButton1Click:Connect(function()
+    nearestOn = not nearestOn
+    collect_settings.collect_nearest_fruit = nearestOn
+    nearestCheckbox.Text = nearestOn and "[✔] Collect Nearest Only" or "[  ] Collect Nearest Only"
+    nearestCheckbox.BackgroundColor3 = nearestOn and Theme.Accent or Theme.Button
+end)
+
+-- Checkbox for 'Use Distance Check'
+local distCheckbox = Instance.new("TextButton", AutocollectTab)
+distCheckbox.Size = UDim2.new(0, 160, 0, 22)
+distCheckbox.Position = UDim2.new(0, 200, 0, 130)
+distCheckbox.BackgroundColor3 = Theme.Button
+distCheckbox.TextColor3 = Theme.Text
+distCheckbox.Font = Enum.Font.Gotham
+distCheckbox.TextSize = 14
+distCheckbox.Text = "[✔] Use Distance Check"
+local distOn = true
+Instance.new("UICorner", distCheckbox).CornerRadius = UDim.new(0, 6)
+distCheckbox.MouseButton1Click:Connect(function()
+    distOn = not distOn
+    collect_settings.use_distance_check = distOn
+    distCheckbox.Text = distOn and "[✔] Use Distance Check" or "[  ] Use Distance Check"
+    distCheckbox.BackgroundColor3 = distOn and Theme.Accent or Theme.Button
+end)
+
+-- Main autocollect logic
 local function get_my_farm()
     for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
         local important = farm:FindFirstChild("Important")
@@ -572,24 +630,10 @@ local function get_my_farm()
     return nil
 end
 
-local function checkFruitAge(part)
-    -- part is ProximityPrompt or fruit, so get parent as fruit
-    local fruit = part.Parent
-    local grow = fruit:FindFirstChild("Grow")
-    return grow and grow:FindFirstChild("Age") and fruit:GetAttribute("MaxAge") and grow.Age.Value >= fruit:GetAttribute("MaxAge")
-end
-
-local function getHRP()
-    local char = localPlayer.Character
-    return char and char:FindFirstChild("HumanoidRootPart")
-end
-
 local function fire_proximity_prompt(prompt)
-    -- works for both PC and mobile
     if fireproximityprompt then
         fireproximityprompt(prompt)
     else
-        -- fallback: simulate E key
         local vi = game:GetService("VirtualInputManager")
         vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
         vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
@@ -604,65 +648,65 @@ autocollect_toggle.MouseButton1Click:Connect(function()
         autocollect_toggle.BackgroundColor3 = Theme.Accent2
         autocollect_thread = task.spawn(function()
             while autocollect_running do
-                local mode = autocollect_mode
+                local character = localPlayer.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
                 local myFarm = get_my_farm()
-                local hrp = getHRP()
-                if myFarm and hrp then
-                    local plants = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical")
-                    if plants then
-                        if mode == "Aura" then
-                            for _,v in ipairs(plants:GetDescendants()) do
-                                if v:IsA("ProximityPrompt") and checkFruitAge(v) and (v.Parent.Position - hrp.Position).Magnitude < 17 then
-                                    fire_proximity_prompt(v)
-                                end
-                            end
-                            task.wait(0.12)
-                        elseif mode == "Random" then
-                            local ps = plants:GetChildren()
-                            if #ps > 0 then
-                                local plant = ps[math.random(1, #ps)]
-                                local fs = plant:FindFirstChild("Fruits") and plant.Fruits:GetChildren() or {}
-                                if #fs > 0 then
-                                    local fruit = fs[math.random(1, #fs)]
-                                    for _,v in ipairs(fruit:GetChildren()) do
-                                        local p = v:FindFirstChildWhichIsA("ProximityPrompt")
-                                        if p and checkFruitAge(v) then
-                                            fire_proximity_prompt(p)
-                                            break
-                                        end
+                if not (hrp and myFarm and myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical")) then
+                    task.wait(0.3)
+                    continue
+                end
+                local plants_physical = myFarm.Important.Plants_Physical
+
+                if collect_settings.collect_nearest_fruit then
+                    local nearest_prompt = nil
+                    local min_distance = math.huge
+                    for _, plant in ipairs(plants_physical:GetChildren()) do
+                        for _, descendant in ipairs(plant:GetDescendants()) do
+                            if descendant:IsA("ProximityPrompt") and descendant.Enabled and descendant.Parent then
+                                local distance_to_fruit = (hrp.Position - descendant.Parent.Position).Magnitude
+                                local can_collect = false
+                                if collect_settings.use_distance_check then
+                                    if distance_to_fruit <= collect_settings.collection_distance then
+                                        can_collect = true
                                     end
+                                else
+                                    can_collect = true
+                                end
+                                if can_collect and distance_to_fruit < min_distance then
+                                    min_distance = distance_to_fruit
+                                    nearest_prompt = descendant
                                 end
                             end
-                            task.wait(0.16)
-                        elseif mode == "Scuffed" then
-                            local ps = plants:GetChildren()
-                            if #ps > 0 then
-                                local plant = ps[math.random(1, #ps)]
-                                local fs = plant:FindFirstChild("Fruits") and plant.Fruits:GetChildren() or {}
-                                if #fs > 0 then
-                                    local fruit = fs[math.random(1, #fs)]
-                                    for _,v in ipairs(fruit:GetChildren()) do
-                                        local p = v:FindFirstChildWhichIsA("ProximityPrompt")
-                                        if p and checkFruitAge(v) then
-                                            local vi = game:GetService("VirtualInputManager")
-                                            vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                                            vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                                            hrp.CFrame = v.CFrame
-                                            break
-                                        end
+                        end
+                    end
+                    if nearest_prompt then
+                        fire_proximity_prompt(nearest_prompt)
+                        task.wait(0.05)
+                    else
+                        task.wait(0.1)
+                    end
+                else
+                    for _, plant in ipairs(plants_physical:GetChildren()) do
+                        for _, fruit_prompt in ipairs(plant:GetDescendants()) do
+                            if fruit_prompt:IsA("ProximityPrompt") and fruit_prompt.Enabled and fruit_prompt.Parent then
+                                local collect_this = false
+                                if collect_settings.use_distance_check then
+                                    local distance = (hrp.Position - fruit_prompt.Parent.Position).Magnitude
+                                    if distance <= collect_settings.collection_distance then
+                                        collect_this = true
                                     end
+                                else
+                                    collect_this = true
+                                end
+                                if collect_this then
+                                    fire_proximity_prompt(fruit_prompt)
+                                    task.wait(0.05)
                                 end
                             end
-                            task.wait(0.16)
-                        else -- E Spam
-                            local vi = game:GetService("VirtualInputManager")
-                            vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                            vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                            task.wait(0.12)
                         end
                     end
                 end
-                task.wait(0.12)
+                task.wait()
             end
         end)
     else
@@ -671,6 +715,7 @@ autocollect_toggle.MouseButton1Click:Connect(function()
         autocollect_toggle.BackgroundColor3 = Theme.Button
     end
 end)
+
 
 
 -- === DRAGGABLE MAIN FRAME ===
