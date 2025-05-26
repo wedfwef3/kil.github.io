@@ -1,3 +1,6 @@
+-- FULL MODERN GROW-A-GARDEN AUTO FARM UI (with improved autosell logic)
+-- By wedfwef3 + Copilot
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -201,7 +204,7 @@ autobuy_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOPLANT TAB ===
+-- === AUTOPLANT TAB === (unchanged from previous working version)
 local AutoplantTab = CreateTab("Autoplant")
 local autoplant_selected = {}
 for i, seed in ipairs(seeds) do
@@ -372,7 +375,7 @@ autoplant_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOSELL TAB (simple example) ===
+-- === AUTOSELL TAB (improved logic) ===
 local AutosellTab = CreateTab("Autosell")
 local autosell_running = false
 local autosell_toggle = Instance.new("TextButton", AutosellTab)
@@ -385,6 +388,11 @@ autosell_toggle.TextSize = 18
 autosell_toggle.Text = "Start Autosell"
 Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
 
+local function getHRP()
+    local char = localPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
 local autosell_thread
 autosell_toggle.MouseButton1Click:Connect(function()
     if not autosell_running then
@@ -392,20 +400,21 @@ autosell_toggle.MouseButton1Click:Connect(function()
         autosell_toggle.Text = "Stop Autosell"
         autosell_toggle.BackgroundColor3 = Theme.Accent2
         autosell_thread = task.spawn(function()
+            local GE = ReplicatedStorage.GameEvents
             while autosell_running do
-                local character = localPlayer.Character
-                local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                if hrp and localPlayer.Backpack and #localPlayer.Backpack:GetChildren() > 199 then
+                local Backpack = localPlayer:FindFirstChild("Backpack")
+                local hrp = getHRP()
+                if Backpack and #Backpack:GetChildren() >= 200 and hrp then
                     local pos = hrp.CFrame
-                    local sellPoint = workspace:FindFirstChild("Tutorial_Points") and workspace.Tutorial_Points:FindFirstChild("Tutorial_Point_2")
-                    if sellPoint then
-                        hrp.CFrame = sellPoint.CFrame
-                        task.wait(0.3)
-                        ReplicatedStorage.GameEvents.Sell_Inventory:FireServer()
-                        hrp.CFrame = pos
-                    end
+                    repeat
+                        hrp.CFrame = workspace.Tutorial_Points.Tutorial_Point_2.CFrame
+                        task.wait(0.2)
+                        GE.Sell_Inventory:FireServer()
+                        task.wait(0.2)
+                    until not autosell_running or #Backpack:GetChildren()<200
+                    hrp.CFrame = pos
                 end
-                task.wait(2)
+                task.wait(1)
             end
         end)
     else
