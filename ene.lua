@@ -492,6 +492,187 @@ autosell_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Add this new tab to your modern UI script for "Autocollect"
+-- This uses the modern UI style and the autoharvest logic you provided!
+
+-- === AUTOCOLLECT TAB ===
+
+local AutocollectTab = CreateTab("Autocollect")
+local autocollect_running = false
+local autocollect_toggle = Instance.new("TextButton", AutocollectTab)
+autocollect_toggle.Size = UDim2.new(0.6, 0, 0, 38)
+autocollect_toggle.Position = UDim2.new(0, 16, 0, 30)
+autocollect_toggle.BackgroundColor3 = Theme.Button
+autocollect_toggle.TextColor3 = Theme.Text
+autocollect_toggle.Font = Enum.Font.GothamBold
+autocollect_toggle.TextSize = 18
+autocollect_toggle.Text = "Start Autocollect"
+Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
+
+-- Harvest mode selector (Aura / Random / Scuffed / E Spam)
+local autocollect_mode = "Aura"
+local modeLabel = Instance.new("TextLabel", AutocollectTab)
+modeLabel.Text = "Harvest Mode:"
+modeLabel.Size = UDim2.new(0, 120, 0, 20)
+modeLabel.Position = UDim2.new(0, 16, 0, 80)
+modeLabel.BackgroundTransparency = 1
+modeLabel.TextColor3 = Theme.Text
+modeLabel.Font = Enum.Font.GothamBold
+modeLabel.TextSize = 14
+modeLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local modeDropdown = Instance.new("TextButton", AutocollectTab)
+modeDropdown.Size = UDim2.new(0,120,0,26)
+modeDropdown.Position = UDim2.new(0, 120, 0, 76)
+modeDropdown.BackgroundColor3 = Theme.Button
+modeDropdown.TextColor3 = Theme.Text
+modeDropdown.Font = Enum.Font.Gotham
+modeDropdown.TextSize = 14
+modeDropdown.Text = autocollect_mode
+Instance.new("UICorner", modeDropdown).CornerRadius = UDim.new(0, 6)
+
+local harvest_modes = {"Aura", "Random", "Scuffed", "E Spam"}
+local modeDropdownOpen = false
+local modeDropdownFrame = Instance.new("Frame", AutocollectTab)
+modeDropdownFrame.BackgroundColor3 = Theme.Button
+modeDropdownFrame.Size = UDim2.new(0, 120, 0, #harvest_modes*22)
+modeDropdownFrame.Position = UDim2.new(0, 120, 0, 102)
+modeDropdownFrame.Visible = false
+Instance.new("UICorner", modeDropdownFrame).CornerRadius = UDim.new(0, 6)
+for i,mode in ipairs(harvest_modes) do
+    local btn = Instance.new("TextButton", modeDropdownFrame)
+    btn.Size = UDim2.new(1, 0, 0, 22)
+    btn.Position = UDim2.new(0, 0, 0, (i-1)*22)
+    btn.BackgroundColor3 = Theme.Button
+    btn.TextColor3 = Theme.Text
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 13
+    btn.Text = mode
+    btn.MouseButton1Click:Connect(function()
+        autocollect_mode = mode
+        modeDropdown.Text = mode
+        modeDropdownFrame.Visible = false
+        modeDropdownOpen = false
+    end)
+end
+modeDropdown.MouseButton1Click:Connect(function()
+    modeDropdownOpen = not modeDropdownOpen
+    modeDropdownFrame.Visible = modeDropdownOpen
+end)
+
+-- Autocollect main logic
+local function get_my_farm()
+    for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
+        local important = farm:FindFirstChild("Important")
+        local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
+        if ownerVal and ownerVal.Value == localPlayer.Name then
+            return farm
+        end
+    end
+    return nil
+end
+
+local function checkFruitAge(part)
+    -- part is ProximityPrompt or fruit, so get parent as fruit
+    local fruit = part.Parent
+    local grow = fruit:FindFirstChild("Grow")
+    return grow and grow:FindFirstChild("Age") and fruit:GetAttribute("MaxAge") and grow.Age.Value >= fruit:GetAttribute("MaxAge")
+end
+
+local function getHRP()
+    local char = localPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function fire_proximity_prompt(prompt)
+    -- works for both PC and mobile
+    if fireproximityprompt then
+        fireproximityprompt(prompt)
+    else
+        -- fallback: simulate E key
+        local vi = game:GetService("VirtualInputManager")
+        vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    end
+end
+
+local autocollect_thread
+autocollect_toggle.MouseButton1Click:Connect(function()
+    if not autocollect_running then
+        autocollect_running = true
+        autocollect_toggle.Text = "Stop Autocollect"
+        autocollect_toggle.BackgroundColor3 = Theme.Accent2
+        autocollect_thread = task.spawn(function()
+            while autocollect_running do
+                local mode = autocollect_mode
+                local myFarm = get_my_farm()
+                local hrp = getHRP()
+                if myFarm and hrp then
+                    local plants = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical")
+                    if plants then
+                        if mode == "Aura" then
+                            for _,v in ipairs(plants:GetDescendants()) do
+                                if v:IsA("ProximityPrompt") and checkFruitAge(v) and (v.Parent.Position - hrp.Position).Magnitude < 17 then
+                                    fire_proximity_prompt(v)
+                                end
+                            end
+                            task.wait(0.12)
+                        elseif mode == "Random" then
+                            local ps = plants:GetChildren()
+                            if #ps > 0 then
+                                local plant = ps[math.random(1, #ps)]
+                                local fs = plant:FindFirstChild("Fruits") and plant.Fruits:GetChildren() or {}
+                                if #fs > 0 then
+                                    local fruit = fs[math.random(1, #fs)]
+                                    for _,v in ipairs(fruit:GetChildren()) do
+                                        local p = v:FindFirstChildWhichIsA("ProximityPrompt")
+                                        if p and checkFruitAge(v) then
+                                            fire_proximity_prompt(p)
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                            task.wait(0.16)
+                        elseif mode == "Scuffed" then
+                            local ps = plants:GetChildren()
+                            if #ps > 0 then
+                                local plant = ps[math.random(1, #ps)]
+                                local fs = plant:FindFirstChild("Fruits") and plant.Fruits:GetChildren() or {}
+                                if #fs > 0 then
+                                    local fruit = fs[math.random(1, #fs)]
+                                    for _,v in ipairs(fruit:GetChildren()) do
+                                        local p = v:FindFirstChildWhichIsA("ProximityPrompt")
+                                        if p and checkFruitAge(v) then
+                                            local vi = game:GetService("VirtualInputManager")
+                                            vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                                            vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                                            hrp.CFrame = v.CFrame
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                            task.wait(0.16)
+                        else -- E Spam
+                            local vi = game:GetService("VirtualInputManager")
+                            vi:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                            vi:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                            task.wait(0.12)
+                        end
+                    end
+                end
+                task.wait(0.12)
+            end
+        end)
+    else
+        autocollect_running = false
+        autocollect_toggle.Text = "Start Autocollect"
+        autocollect_toggle.BackgroundColor3 = Theme.Button
+    end
+end)
+
+
 -- === DRAGGABLE MAIN FRAME ===
 local dragging = false
 local dragStart, startPos, dragInput
