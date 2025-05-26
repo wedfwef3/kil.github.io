@@ -1,4 +1,5 @@
 
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -117,7 +118,7 @@ for i, seed in ipairs(seeds) do
     autobuy_selected[seed] = false
 end
 local autobuy_running = false
-local autobuy_toggle
+local autobuy_thread
 
 local AutobuyLabel = Instance.new("TextLabel", AutobuyTab)
 AutobuyLabel.Text = "Select seeds to autobuy:"
@@ -168,7 +169,7 @@ local function get_autobuy_list()
     return t
 end
 
-autobuy_toggle = Instance.new("TextButton", AutobuyTab)
+local autobuy_toggle = Instance.new("TextButton", AutobuyTab)
 autobuy_toggle.Size = UDim2.new(0.36, 0, 0, 38)
 autobuy_toggle.Position = UDim2.new(0.6, 0, 0, 40)
 autobuy_toggle.BackgroundColor3 = Theme.Button
@@ -178,8 +179,6 @@ autobuy_toggle.TextSize = 17
 autobuy_toggle.Text = "Start Autobuy"
 Instance.new("UICorner", autobuy_toggle).CornerRadius = UDim.new(0, 7)
 
--- AUTOBUY LOOP
-local autobuy_thread
 autobuy_toggle.MouseButton1Click:Connect(function()
     if not autobuy_running then
         autobuy_running = true
@@ -209,7 +208,7 @@ for i, seed in ipairs(seeds) do
     autoplant_selected[seed] = false
 end
 local autoplant_running = false
-local autoplant_toggle
+local autoplant_thread
 
 local AutoplantLabel = Instance.new("TextLabel", AutoplantTab)
 AutoplantLabel.Text = "Select seeds to autoplant:"
@@ -260,7 +259,7 @@ local function get_autoplant_list()
     return t
 end
 
-autoplant_toggle = Instance.new("TextButton", AutoplantTab)
+local autoplant_toggle = Instance.new("TextButton", AutoplantTab)
 autoplant_toggle.Size = UDim2.new(0.36, 0, 0, 38)
 autoplant_toggle.Position = UDim2.new(0.6, 0, 0, 40)
 autoplant_toggle.BackgroundColor3 = Theme.Button
@@ -318,7 +317,6 @@ local function equip_seed(tool)
     end
 end
 
-local autoplant_thread
 autoplant_toggle.MouseButton1Click:Connect(function()
     if not autoplant_running then
         autoplant_running = true
@@ -370,9 +368,11 @@ autoplant_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOSELL TAB (full universal slider for PC + Mobile) ===
+-- === AUTOSELL TAB ===
 local AutosellTab = CreateTab("Autosell")
 local autosell_running = false
+local autosell_thread
+
 local autosell_toggle = Instance.new("TextButton", AutosellTab)
 autosell_toggle.Size = UDim2.new(0.6, 0, 0, 38)
 autosell_toggle.Position = UDim2.new(0, 16, 0, 64)
@@ -461,7 +461,6 @@ local function getHRP()
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
-local autosell_thread
 autosell_toggle.MouseButton1Click:Connect(function()
     if not autosell_running then
         autosell_running = true
@@ -492,8 +491,11 @@ autosell_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- === AUTOCOLLECT TAB ===
 local AutocollectTab = CreateTab("Autocollect")
 local autocollect_running = false
+local autocollect_thread
+
 local autocollect_toggle = Instance.new("TextButton", AutocollectTab)
 autocollect_toggle.Size = UDim2.new(0.6, 0, 0, 38)
 autocollect_toggle.Position = UDim2.new(0, 16, 0, 30)
@@ -504,24 +506,9 @@ autocollect_toggle.TextSize = 18
 autocollect_toggle.Text = "Start Autocollect"
 Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
 
--- === SETTINGS ===
-local COLLECT_DISTANCE = 17 -- hardcoded maximum collection distance
-local TP_POSITIONS = {
-    Vector3.new(0, 0, 0), -- Will be replaced with user's actual farm coordinates!
-    Vector3.new(0, 0, 0)
-}
-
--- Get two default plant locations in user's farm
+local COLLECT_DISTANCE = 17 -- hardcoded max
 local function get_plant_locations()
-    local myFarm = nil
-    for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
-        local important = farm:FindFirstChild("Important")
-        local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
-        if ownerVal and ownerVal.Value == localPlayer.Name then
-            myFarm = farm
-            break
-        end
-    end
+    local myFarm = get_my_farm()
     if myFarm and myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plant_Locations") then
         local locs = {}
         for _, part in ipairs(myFarm.Important.Plant_Locations:GetChildren()) do
@@ -535,7 +522,6 @@ local function get_plant_locations()
             return {locs[1], locs[1]}
         end
     end
-    -- fallback: center of map
     return {Vector3.new(0,0,0), Vector3.new(0,0,0)}
 end
 
@@ -549,39 +535,22 @@ local function fire_proximity_prompt(prompt)
     end
 end
 
-local function getHRP()
-    local char = localPlayer.Character
-    return char and char:FindFirstChild("HumanoidRootPart")
-end
-
-local autocollect_thread
 autocollect_toggle.MouseButton1Click:Connect(function()
     if not autocollect_running then
         autocollect_running = true
         autocollect_toggle.Text = "Stop Autocollect"
         autocollect_toggle.BackgroundColor3 = Theme.Accent2
-
         autocollect_thread = task.spawn(function()
             while autocollect_running do
                 local character = localPlayer.Character
                 local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                local myFarm = nil
-                for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
-                    local important = farm:FindFirstChild("Important")
-                    local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
-                    if ownerVal and ownerVal.Value == localPlayer.Name then
-                        myFarm = farm
-                        break
-                    end
-                end
+                local myFarm = get_my_farm()
                 if hrp and myFarm and myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical") then
                     local plants_physical = myFarm.Important.Plants_Physical
-                    TP_POSITIONS = get_plant_locations()
-                    for _, tpPos in ipairs(TP_POSITIONS) do
-                        hrp.CFrame = CFrame.new(tpPos + Vector3.new(0, 3, 0)) -- TP slightly above
-                        -- Wait for physics to settle
+                    local tps = get_plant_locations()
+                    for _, tpPos in ipairs(tps) do
+                        hrp.CFrame = CFrame.new(tpPos + Vector3.new(0, 3, 0))
                         task.wait(0.1)
-                        -- Collect all fruits within COLLECT_DISTANCE
                         for _, plant in ipairs(plants_physical:GetChildren()) do
                             for _, descendant in ipairs(plant:GetDescendants()) do
                                 if descendant:IsA("ProximityPrompt") and descendant.Enabled and descendant.Parent then
@@ -605,8 +574,6 @@ autocollect_toggle.MouseButton1Click:Connect(function()
         autocollect_toggle.BackgroundColor3 = Theme.Button
     end
 end)
-
-
 
 -- === DRAGGABLE MAIN FRAME ===
 local dragging = false
