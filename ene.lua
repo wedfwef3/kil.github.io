@@ -191,7 +191,7 @@ autobuy_toggle.MouseButton1Click:Connect(function()
                     ReplicatedStorage.GameEvents.BuySeedStock:FireServer(seed)
                     task.wait(0.12)
                 end
-                task.wait(2)
+                task.wait(0.5)
             end
         end)
     else
