@@ -1,5 +1,4 @@
--- FULL MODERN GROW-A-GARDEN AUTO FARM UI (with improved autosell logic)
--- By wedfwef3 + Copilot
+
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -204,7 +203,7 @@ autobuy_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOPLANT TAB === (unchanged from previous working version)
+-- === AUTOPLANT TAB ===
 local AutoplantTab = CreateTab("Autoplant")
 local autoplant_selected = {}
 for i, seed in ipairs(seeds) do
@@ -375,18 +374,83 @@ autoplant_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOSELL TAB (improved logic) ===
+-- === AUTOSELL TAB (with threshold slider) ===
 local AutosellTab = CreateTab("Autosell")
 local autosell_running = false
 local autosell_toggle = Instance.new("TextButton", AutosellTab)
 autosell_toggle.Size = UDim2.new(0.6, 0, 0, 38)
-autosell_toggle.Position = UDim2.new(0, 16, 0, 24)
+autosell_toggle.Position = UDim2.new(0, 16, 0, 64)
 autosell_toggle.BackgroundColor3 = Theme.Button
 autosell_toggle.TextColor3 = Theme.Text
 autosell_toggle.Font = Enum.Font.GothamBold
 autosell_toggle.TextSize = 18
 autosell_toggle.Text = "Start Autosell"
 Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
+
+-- === Autosell Threshold Slider ===
+local autosell_threshold = 200 -- default value
+
+local sliderLabel = Instance.new("TextLabel", AutosellTab)
+sliderLabel.Text = "Sell when backpack has at least: "..tostring(autosell_threshold)
+sliderLabel.Size = UDim2.new(1, -20, 0, 24)
+sliderLabel.Position = UDim2.new(0, 16, 0, 24)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.TextColor3 = Theme.Text
+sliderLabel.Font = Enum.Font.GothamBold
+sliderLabel.TextSize = 15
+sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local sliderFrame = Instance.new("Frame", AutosellTab)
+sliderFrame.BackgroundColor3 = Theme.Button
+sliderFrame.Size = UDim2.new(0.9, 0, 0, 14)
+sliderFrame.Position = UDim2.new(0, 16, 0, 48)
+Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 5)
+
+-- Draggable slider bar
+local sliderBar = Instance.new("Frame", sliderFrame)
+sliderBar.BackgroundColor3 = Theme.Accent
+sliderBar.Size = UDim2.new(0, 8, 1, 0)
+sliderBar.Position = UDim2.new(1, -8, 0, 0)
+sliderBar.AnchorPoint = Vector2.new(0.5, 0.5)
+sliderBar.Name = "SliderBar"
+Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 4)
+
+local draggingSlider = false
+local function setSliderFromX(x)
+    local rel = math.clamp((x - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
+    autosell_threshold = math.floor(1 + rel * 199)
+    sliderBar.Position = UDim2.new(rel, -4, 0.5, 0)
+    sliderLabel.Text = "Sell when backpack has at least: "..tostring(autosell_threshold)
+end
+
+sliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = true
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
+        setSliderFromX(input.Position.X)
+    end
+end)
+sliderBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
+end)
+sliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setSliderFromX(input.Position.X)
+        draggingSlider = true
+    end
+end)
+sliderFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
+end)
+
+sliderBar.Position = UDim2.new(1, -4, 0.5, 0)
 
 local function getHRP()
     local char = localPlayer.Character
@@ -404,14 +468,14 @@ autosell_toggle.MouseButton1Click:Connect(function()
             while autosell_running do
                 local Backpack = localPlayer:FindFirstChild("Backpack")
                 local hrp = getHRP()
-                if Backpack and #Backpack:GetChildren() >= 200 and hrp then
+                if Backpack and #Backpack:GetChildren() >= autosell_threshold and hrp then
                     local pos = hrp.CFrame
                     repeat
                         hrp.CFrame = workspace.Tutorial_Points.Tutorial_Point_2.CFrame
                         task.wait(0.2)
                         GE.Sell_Inventory:FireServer()
                         task.wait(0.2)
-                    until not autosell_running or #Backpack:GetChildren()<200
+                    until not autosell_running or #Backpack:GetChildren()<autosell_threshold
                     hrp.CFrame = pos
                 end
                 task.wait(1)
