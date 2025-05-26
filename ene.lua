@@ -1,5 +1,4 @@
 
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -291,15 +290,12 @@ local function shuffle(t)
 end
 
 local function get_seed_tool(seedList)
-    -- Returns the first available seed tool from the selected seeds, or nil if none
     for _, seedName in ipairs(seedList) do
-        -- Backpack first
         for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
             if item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seedName then
                 return item, seedName
             end
         end
-        -- Then character
         local char = localPlayer.Character
         if char then
             for _, item in ipairs(char:GetChildren()) do
@@ -358,7 +354,7 @@ autoplant_toggle.MouseButton1Click:Connect(function()
                                 if not autoplant_running then return end
                                 ReplicatedStorage.GameEvents.Plant_RE:FireServer(spot.Position, seedName)
                                 task.wait(0.09)
-                                break -- Plant one, then recheck inventory
+                                break
                             end
                             task.wait(0.08)
                         end
@@ -374,7 +370,7 @@ autoplant_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOSELL TAB (with threshold slider) ===
+-- === AUTOSELL TAB (full universal slider for PC + Mobile) ===
 local AutosellTab = CreateTab("Autosell")
 local autosell_running = false
 local autosell_toggle = Instance.new("TextButton", AutosellTab)
@@ -387,9 +383,7 @@ autosell_toggle.TextSize = 18
 autosell_toggle.Text = "Start Autosell"
 Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
 
--- === Autosell Threshold Slider ===
-local autosell_threshold = 200 -- default value
-
+local autosell_threshold = 200
 local sliderLabel = Instance.new("TextLabel", AutosellTab)
 sliderLabel.Text = "Sell when backpack has at least: "..tostring(autosell_threshold)
 sliderLabel.Size = UDim2.new(1, -20, 0, 24)
@@ -406,51 +400,61 @@ sliderFrame.Size = UDim2.new(0.9, 0, 0, 14)
 sliderFrame.Position = UDim2.new(0, 16, 0, 48)
 Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 5)
 
--- Draggable slider bar
 local sliderBar = Instance.new("Frame", sliderFrame)
 sliderBar.BackgroundColor3 = Theme.Accent
-sliderBar.Size = UDim2.new(0, 8, 1, 0)
-sliderBar.Position = UDim2.new(1, -8, 0, 0)
-sliderBar.AnchorPoint = Vector2.new(0.5, 0.5)
+sliderBar.Size = UDim2.new(0, 12, 1, 0)
+sliderBar.Position = UDim2.new(1, -6, 0, 0)
+sliderBar.AnchorPoint = Vector2.new(0, 0.5)
 sliderBar.Name = "SliderBar"
-Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 6)
 
 local draggingSlider = false
+
 local function setSliderFromX(x)
-    local rel = math.clamp((x - sliderFrame.AbsolutePosition.X) / sliderFrame.AbsoluteSize.X, 0, 1)
-    autosell_threshold = math.floor(1 + rel * 199)
-    sliderBar.Position = UDim2.new(rel, -4, 0.5, 0)
+    local left = sliderFrame.AbsolutePosition.X
+    local width = sliderFrame.AbsoluteSize.X
+    local rel = math.clamp((x - left) / width, 0, 1)
+    autosell_threshold = math.floor(1 + rel * 199 + 0.5)
+    local barPos = rel * width - sliderBar.Size.X.Offset/2
+    sliderBar.Position = UDim2.new(0, barPos, 0.5, 0)
     sliderLabel.Text = "Sell when backpack has at least: "..tostring(autosell_threshold)
 end
 
-sliderBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = true
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
-        setSliderFromX(input.Position.X)
-    end
-end)
-sliderBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = false
-    end
-end)
+local function beginDrag(input)
+    draggingSlider = true
+    setSliderFromX(input.Position.X)
+end
+local function endDrag()
+    draggingSlider = false
+end
+
 sliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        setSliderFromX(input.Position.X)
-        draggingSlider = true
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        beginDrag(input)
     end
 end)
 sliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = false
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        endDrag()
+    end
+end)
+sliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        beginDrag(input)
+    end
+end)
+sliderBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        endDrag()
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        setSliderFromX(input.Position.X)
     end
 end)
 
-sliderBar.Position = UDim2.new(1, -4, 0.5, 0)
+sliderBar.Position = UDim2.new(1, -6, 0.5, 0)
 
 local function getHRP()
     local char = localPlayer.Character
