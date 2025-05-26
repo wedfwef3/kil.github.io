@@ -710,3 +710,60 @@ UserInputService.InputChanged:Connect(function(input)
         )
     end
 end)
+
+
+-- === MINIMIZE/RESTORE BUTTONS (Grow-a-Garden UI STYLE) ===
+local TweenService = game:GetService("TweenService")
+
+-- Minimize button (top right, inside MainFrame)
+local MinimizeButton = Instance.new("TextButton", MainFrame)
+MinimizeButton.Text = "-"
+MinimizeButton.Size = UDim2.new(0, 26, 0, 26)
+MinimizeButton.Position = UDim2.new(1, -32, 0, 8)
+MinimizeButton.BackgroundColor3 = Theme.Accent
+MinimizeButton.TextColor3 = Theme.Text
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextSize = 20
+Instance.new("UICorner", MinimizeButton).CornerRadius = UDim.new(0, 8)
+
+-- Reopen button (centered in screenGui, hidden by default)
+local ReopenButton = Instance.new("TextButton", screenGui)
+ReopenButton.Text = "Open UI"
+ReopenButton.Size = UDim2.new(0, 140, 0, 38)
+ReopenButton.Position = UDim2.new(0.5, 0, 0, 18)
+ReopenButton.AnchorPoint = Vector2.new(0.5, 0)
+ReopenButton.BackgroundColor3 = Theme.Button
+ReopenButton.TextColor3 = Theme.Text
+ReopenButton.Font = Enum.Font.GothamBold
+ReopenButton.TextSize = 18
+ReopenButton.Visible = false
+Instance.new("UICorner", ReopenButton).CornerRadius = UDim.new(0, 7)
+
+local isMinimized = false
+local origSize = MainFrame.Size
+local origPos = MainFrame.Position
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    if not isMinimized then
+        isMinimized = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {
+            Size = UDim2.new(0, 180, 0, 38),
+            Position = UDim2.new(0.5, 0, 0, -50)
+        }):Play()
+        task.wait(0.22)
+        MainFrame.Visible = false
+        ReopenButton.Visible = true
+    end
+end)
+
+ReopenButton.MouseButton1Click:Connect(function()
+    if isMinimized then
+        isMinimized = false
+        MainFrame.Visible = true
+        ReopenButton.Visible = false
+        TweenService:Create(MainFrame, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {
+            Size = origSize,
+            Position = origPos
+        }):Play()
+    end
+end)
