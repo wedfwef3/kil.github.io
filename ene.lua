@@ -492,8 +492,6 @@ autosell_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOCOLLECT TAB (with nearest fruit and distance check) ===
-
 local AutocollectTab = CreateTab("Autocollect")
 local autocollect_running = false
 local autocollect_toggle = Instance.new("TextButton", AutocollectTab)
@@ -506,128 +504,39 @@ autocollect_toggle.TextSize = 18
 autocollect_toggle.Text = "Start Autocollect"
 Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
 
--- Settings for collecting
-local collect_settings = {
-    use_distance_check = true,
-    collection_distance = 17,
-    collect_nearest_fruit = true,
+-- === SETTINGS ===
+local COLLECT_DISTANCE = 17 -- hardcoded maximum collection distance
+local TP_POSITIONS = {
+    Vector3.new(0, 0, 0), -- Will be replaced with user's actual farm coordinates!
+    Vector3.new(0, 0, 0)
 }
 
--- Distance slider
-local distLabel = Instance.new("TextLabel", AutocollectTab)
-distLabel.Text = "Collection Distance: "..tostring(collect_settings.collection_distance)
-distLabel.Size = UDim2.new(1, -20, 0, 24)
-distLabel.Position = UDim2.new(0, 16, 0, 80)
-distLabel.BackgroundTransparency = 1
-distLabel.TextColor3 = Theme.Text
-distLabel.Font = Enum.Font.GothamBold
-distLabel.TextSize = 14
-distLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local distSliderFrame = Instance.new("Frame", AutocollectTab)
-distSliderFrame.BackgroundColor3 = Theme.Button
-distSliderFrame.Size = UDim2.new(0.9, 0, 0, 14)
-distSliderFrame.Position = UDim2.new(0, 16, 0, 104)
-Instance.new("UICorner", distSliderFrame).CornerRadius = UDim.new(0, 5)
-
-local distSliderBar = Instance.new("Frame", distSliderFrame)
-distSliderBar.BackgroundColor3 = Theme.Accent
-distSliderBar.Size = UDim2.new(0, 12, 1, 0)
-distSliderBar.Position = UDim2.new((collect_settings.collection_distance-1)/29, -6, 0.5, 0)
-distSliderBar.AnchorPoint = Vector2.new(0, 0.5)
-Instance.new("UICorner", distSliderBar).CornerRadius = UDim.new(0, 6)
-
-local draggingDistSlider = false
-local function setDistSliderFromX(x)
-    local left = distSliderFrame.AbsolutePosition.X
-    local width = distSliderFrame.AbsoluteSize.X
-    local rel = math.clamp((x - left) / width, 0, 1)
-    collect_settings.collection_distance = math.floor(1 + rel * 29 + 0.5)
-    local barPos = rel * width - distSliderBar.Size.X.Offset/2
-    distSliderBar.Position = UDim2.new(0, barPos, 0.5, 0)
-    distLabel.Text = "Collection Distance: "..tostring(collect_settings.collection_distance)
-end
-
-local function beginDistDrag(input)
-    draggingDistSlider = true
-    setDistSliderFromX(input.Position.X)
-end
-local function endDistDrag()
-    draggingDistSlider = false
-end
-
-distSliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        beginDistDrag(input)
-    end
-end)
-distSliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        endDistDrag()
-    end
-end)
-distSliderBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        beginDistDrag(input)
-    end
-end)
-distSliderBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        endDistDrag()
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if draggingDistSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        setDistSliderFromX(input.Position.X)
-    end
-end)
-
--- Checkbox for 'Nearest Fruit Only'
-local nearestCheckbox = Instance.new("TextButton", AutocollectTab)
-nearestCheckbox.Size = UDim2.new(0, 160, 0, 22)
-nearestCheckbox.Position = UDim2.new(0, 16, 0, 130)
-nearestCheckbox.BackgroundColor3 = Theme.Button
-nearestCheckbox.TextColor3 = Theme.Text
-nearestCheckbox.Font = Enum.Font.Gotham
-nearestCheckbox.TextSize = 14
-nearestCheckbox.Text = "[✔] Collect Nearest Only"
-local nearestOn = true
-Instance.new("UICorner", nearestCheckbox).CornerRadius = UDim.new(0, 6)
-nearestCheckbox.MouseButton1Click:Connect(function()
-    nearestOn = not nearestOn
-    collect_settings.collect_nearest_fruit = nearestOn
-    nearestCheckbox.Text = nearestOn and "[✔] Collect Nearest Only" or "[  ] Collect Nearest Only"
-    nearestCheckbox.BackgroundColor3 = nearestOn and Theme.Accent or Theme.Button
-end)
-
--- Checkbox for 'Use Distance Check'
-local distCheckbox = Instance.new("TextButton", AutocollectTab)
-distCheckbox.Size = UDim2.new(0, 160, 0, 22)
-distCheckbox.Position = UDim2.new(0, 200, 0, 130)
-distCheckbox.BackgroundColor3 = Theme.Button
-distCheckbox.TextColor3 = Theme.Text
-distCheckbox.Font = Enum.Font.Gotham
-distCheckbox.TextSize = 14
-distCheckbox.Text = "[✔] Use Distance Check"
-local distOn = true
-Instance.new("UICorner", distCheckbox).CornerRadius = UDim.new(0, 6)
-distCheckbox.MouseButton1Click:Connect(function()
-    distOn = not distOn
-    collect_settings.use_distance_check = distOn
-    distCheckbox.Text = distOn and "[✔] Use Distance Check" or "[  ] Use Distance Check"
-    distCheckbox.BackgroundColor3 = distOn and Theme.Accent or Theme.Button
-end)
-
--- Main autocollect logic
-local function get_my_farm()
+-- Get two default plant locations in user's farm
+local function get_plant_locations()
+    local myFarm = nil
     for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
         local important = farm:FindFirstChild("Important")
         local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
         if ownerVal and ownerVal.Value == localPlayer.Name then
-            return farm
+            myFarm = farm
+            break
         end
     end
-    return nil
+    if myFarm and myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plant_Locations") then
+        local locs = {}
+        for _, part in ipairs(myFarm.Important.Plant_Locations:GetChildren()) do
+            if part:IsA("BasePart") then
+                table.insert(locs, part.Position)
+            end
+        end
+        if #locs >= 2 then
+            return {locs[1], locs[2]}
+        elseif #locs == 1 then
+            return {locs[1], locs[1]}
+        end
+    end
+    -- fallback: center of map
+    return {Vector3.new(0,0,0), Vector3.new(0,0,0)}
 end
 
 local function fire_proximity_prompt(prompt)
@@ -640,73 +549,54 @@ local function fire_proximity_prompt(prompt)
     end
 end
 
+local function getHRP()
+    local char = localPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
 local autocollect_thread
 autocollect_toggle.MouseButton1Click:Connect(function()
     if not autocollect_running then
         autocollect_running = true
         autocollect_toggle.Text = "Stop Autocollect"
         autocollect_toggle.BackgroundColor3 = Theme.Accent2
+
         autocollect_thread = task.spawn(function()
             while autocollect_running do
                 local character = localPlayer.Character
                 local hrp = character and character:FindFirstChild("HumanoidRootPart")
-                local myFarm = get_my_farm()
-                if not (hrp and myFarm and myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical")) then
-                    task.wait(0.3)
-                    continue
+                local myFarm = nil
+                for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
+                    local important = farm:FindFirstChild("Important")
+                    local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
+                    if ownerVal and ownerVal.Value == localPlayer.Name then
+                        myFarm = farm
+                        break
+                    end
                 end
-                local plants_physical = myFarm.Important.Plants_Physical
-
-                if collect_settings.collect_nearest_fruit then
-                    local nearest_prompt = nil
-                    local min_distance = math.huge
-                    for _, plant in ipairs(plants_physical:GetChildren()) do
-                        for _, descendant in ipairs(plant:GetDescendants()) do
-                            if descendant:IsA("ProximityPrompt") and descendant.Enabled and descendant.Parent then
-                                local distance_to_fruit = (hrp.Position - descendant.Parent.Position).Magnitude
-                                local can_collect = false
-                                if collect_settings.use_distance_check then
-                                    if distance_to_fruit <= collect_settings.collection_distance then
-                                        can_collect = true
+                if hrp and myFarm and myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical") then
+                    local plants_physical = myFarm.Important.Plants_Physical
+                    TP_POSITIONS = get_plant_locations()
+                    for _, tpPos in ipairs(TP_POSITIONS) do
+                        hrp.CFrame = CFrame.new(tpPos + Vector3.new(0, 3, 0)) -- TP slightly above
+                        -- Wait for physics to settle
+                        task.wait(0.1)
+                        -- Collect all fruits within COLLECT_DISTANCE
+                        for _, plant in ipairs(plants_physical:GetChildren()) do
+                            for _, descendant in ipairs(plant:GetDescendants()) do
+                                if descendant:IsA("ProximityPrompt") and descendant.Enabled and descendant.Parent then
+                                    local dist = (hrp.Position - descendant.Parent.Position).Magnitude
+                                    if dist <= COLLECT_DISTANCE then
+                                        fire_proximity_prompt(descendant)
+                                        task.wait(0.03)
                                     end
-                                else
-                                    can_collect = true
-                                end
-                                if can_collect and distance_to_fruit < min_distance then
-                                    min_distance = distance_to_fruit
-                                    nearest_prompt = descendant
                                 end
                             end
                         end
-                    end
-                    if nearest_prompt then
-                        fire_proximity_prompt(nearest_prompt)
-                        task.wait(0.05)
-                    else
                         task.wait(0.1)
                     end
-                else
-                    for _, plant in ipairs(plants_physical:GetChildren()) do
-                        for _, fruit_prompt in ipairs(plant:GetDescendants()) do
-                            if fruit_prompt:IsA("ProximityPrompt") and fruit_prompt.Enabled and fruit_prompt.Parent then
-                                local collect_this = false
-                                if collect_settings.use_distance_check then
-                                    local distance = (hrp.Position - fruit_prompt.Parent.Position).Magnitude
-                                    if distance <= collect_settings.collection_distance then
-                                        collect_this = true
-                                    end
-                                else
-                                    collect_this = true
-                                end
-                                if collect_this then
-                                    fire_proximity_prompt(fruit_prompt)
-                                    task.wait(0.05)
-                                end
-                            end
-                        end
-                    end
                 end
-                task.wait()
+                task.wait(0.3)
             end
         end)
     else
