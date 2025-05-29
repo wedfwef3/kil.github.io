@@ -201,7 +201,7 @@ autobuy_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOPLANT TAB ===
+-- === AUTOPLANT TAB (SMART RANDOM PLANTING, NO TELEPORT) ===
 local AutoplantTab = CreateTab("Autoplant")
 local autoplant_selected = {}
 for i, seed in ipairs(seeds) do
@@ -269,45 +269,59 @@ autoplant_toggle.TextSize = 17
 autoplant_toggle.Text = "Start Autoplant"
 Instance.new("UICorner", autoplant_toggle).CornerRadius = UDim.new(0, 7)
 
-local function get_my_farm()
-    for _, farm in ipairs(workspace:WaitForChild("Farm"):GetChildren()) do
-        local important = farm:FindFirstChild("Important")
-        local ownerVal = important and important:FindFirstChild("Data") and important.Data:FindFirstChild("Owner")
-        if ownerVal and ownerVal.Value == localPlayer.Name then
+local function getMyFarm()
+    for _, farm in pairs(workspace.Farm:GetChildren()) do
+        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
+        if data and data:FindFirstChild("Owner") and data.Owner.Value == localPlayer.Name then
             return farm
         end
     end
     return nil
 end
 
-local function shuffle(t)
-    local n = #t
-    for i = n, 2, -1 do
-        local j = math.random(i)
-        t[i], t[j] = t[j], t[i]
-    end
-end
-
-local function get_seed_tool(seedList)
-    for _, seedName in ipairs(seedList) do
-        for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
-            if item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seedName then
-                return item, seedName
-            end
-        end
-        local char = localPlayer.Character
-        if char then
-            for _, item in ipairs(char:GetChildren()) do
-                if item:IsA("Tool") and item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seedName then
-                    return item, seedName
+local function getCanPlantParts()
+    local myFarm = getMyFarm()
+    local canPlant = {}
+    if myFarm then
+        local plantLocations = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plant_Locations")
+        if plantLocations then
+            for _, part in ipairs(plantLocations:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name:find("Can_Plant") then
+                    table.insert(canPlant, part)
                 end
             end
         end
     end
-    return nil, nil
+    return canPlant
 end
 
-local function equip_seed(tool)
+local function getRandomPosition(part)
+    local offset = Vector3.new(
+        math.random(-part.Size.X/2, part.Size.X/2),
+        0,
+        math.random(-part.Size.Z/2, part.Size.Z/2)
+    )
+    return part.Position + offset + Vector3.new(0, 2, 0)
+end
+
+local function getSeedTool(seedName)
+    for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
+        if item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seedName then
+            return item
+        end
+    end
+    local char = localPlayer.Character
+    if char then
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Tool") and item:GetAttribute("ITEM_TYPE") == "Seed" and item:GetAttribute("Seed") == seedName then
+                return item
+            end
+        end
+    end
+    return nil
+end
+
+local function equipSeed(tool)
     if tool and localPlayer.Character then
         local humanoid = localPlayer.Character:FindFirstChildOfClass("Humanoid")
         if humanoid and tool.Parent ~= localPlayer.Character then
@@ -317,54 +331,66 @@ local function equip_seed(tool)
     end
 end
 
+local function isInventoryFull()
+    return #localPlayer.Backpack:GetChildren() >= 200
+end
+
 autoplant_toggle.MouseButton1Click:Connect(function()
-    if not autoplant_running then
-        autoplant_running = true
+    autoplant_running = not autoplant_running
+    if autoplant_running then
         autoplant_toggle.Text = "Stop Autoplant"
         autoplant_toggle.BackgroundColor3 = Theme.Accent2
         autoplant_thread = task.spawn(function()
             while autoplant_running do
+                if isInventoryFull() then
+                    autoplant_toggle.Text = "Backpack Full!"
+                    repeat
+                        task.wait(0.5)
+                    until not isInventoryFull() or not autoplant_running
+                    autoplant_toggle.Text = "Stop Autoplant"
+                end
+                if not autoplant_running then break end
+
                 local list = get_autoplant_list()
                 if #list == 0 then
                     task.wait(0.7)
                     continue
                 end
-                local myFarm = get_my_farm()
-                if myFarm then
-                    local plantLocations = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plant_Locations")
-                    if plantLocations then
-                        local allPlots = {}
-                        for _, plot in ipairs(plantLocations:GetChildren()) do
-                            if plot:IsA("BasePart") then
-                                table.insert(allPlots, plot)
-                            end
-                        end
-                        shuffle(allPlots)
-                        while autoplant_running do
-                            local tool, seedName = get_seed_tool(list)
-                            if not tool then
-                                task.wait(0.7)
-                                break
-                            end
-                            equip_seed(tool)
-                            shuffle(allPlots)
-                            for _, spot in ipairs(allPlots) do
-                                if not autoplant_running then return end
-                                ReplicatedStorage.GameEvents.Plant_RE:FireServer(spot.Position, seedName)
-                                task.wait(0.09)
-                                break
-                            end
-                            task.wait(0.08)
+
+                local plantParts = getCanPlantParts()
+                if #plantParts == 0 then
+                    task.wait(0.7)
+                    continue
+                end
+
+                for _, seedName in ipairs(list) do
+                    local tool = getSeedTool(seedName)
+                    if tool then
+                        equipSeed(tool)
+                        -- Try to plant at random spots up to N times
+                        local maxTries = #plantParts * 2
+                        for i = 1, maxTries do
+                            if not autoplant_running or isInventoryFull() then return end
+                            local spot = plantParts[math.random(1, #plantParts)]
+                            local pos = getRandomPosition(spot)
+                            -- Try to plant
+                            ReplicatedStorage.GameEvents.Plant_RE:FireServer(pos, seedName)
+                            task.wait(0.12)
                         end
                     end
                 end
                 task.wait(0.5)
             end
+            autoplant_toggle.Text = "Start Autoplant"
+            autoplant_toggle.BackgroundColor3 = Theme.Button
         end)
     else
-        autoplant_running = false
         autoplant_toggle.Text = "Start Autoplant"
         autoplant_toggle.BackgroundColor3 = Theme.Button
+        if autoplant_thread then
+            task.cancel(autoplant_thread)
+            autoplant_thread = nil
+        end
     end
 end)
 
