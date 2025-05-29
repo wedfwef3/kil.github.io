@@ -771,6 +771,130 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- === Mutation ESP Tab with Plasma, Disco, Zombified Support ===
+local mutations = {
+    "Wet", "Gold", "Frozen", "Rainbow", "Choc", "Chilled",
+    "Shocked", "Moonlit", "Bloodlit", "Celestial", "Disco", "Zombified", "Plasma"
+}
+local mutationColors = {
+    Wet = Color3.fromRGB(100,200,255),
+    Gold = Color3.fromRGB(255, 215, 0),
+    Frozen = Color3.fromRGB(135, 206, 235),
+    Rainbow = Color3.fromRGB(255, 0, 255),
+    Choc = Color3.fromRGB(120,72,0),
+    Chilled = Color3.fromRGB(170,230,255),
+    Shocked = Color3.fromRGB(255,255,100),
+    Moonlit = Color3.fromRGB(150,100,255),
+    Bloodlit = Color3.fromRGB(200,10,60),
+    Celestial = Color3.fromRGB(200,255,255),
+    Disco = Color3.fromRGB(255,120,255),
+    Zombified = Color3.fromRGB(80,255,100),
+    Plasma = Color3.fromRGB(60, 255, 255)
+}
+
+local EspTab = CreateTab("Mutation ESP")
+local espToggle = Instance.new("TextButton", EspTab)
+espToggle.Size = UDim2.new(0.6, 0, 0, 38)
+espToggle.Position = UDim2.new(0, 16, 0, 30)
+espToggle.BackgroundColor3 = Theme.Button
+espToggle.TextColor3 = Theme.Text
+espToggle.Font = Enum.Font.GothamBold
+espToggle.TextSize = 18
+espToggle.Text = "Enable Mutation ESP"
+Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 7)
+
+local plantEsp = {}
+
+local function clearPlantEsp()
+    for plant,gui in pairs(plantEsp) do
+        if gui and gui.Parent then gui:Destroy() end
+    end
+    plantEsp = {}
+end
+
+local function getMyGarden()
+    for _, farm in ipairs(workspace.Farm:GetChildren()) do
+        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
+        if data and data:FindFirstChild("Owner") and data.Owner.Value == localPlayer.Name then
+            return farm
+        end
+    end
+    return nil
+end
+
+local function getPhysicalPlants()
+    local garden = getMyGarden()
+    local ret = {}
+    if garden then
+        local plantsFolder = garden:FindFirstChild("Important") and garden.Important:FindFirstChild("Plants_Physical")
+        if plantsFolder then
+            for _, plant in ipairs(plantsFolder:GetChildren()) do
+                table.insert(ret, plant)
+            end
+        end
+    end
+    return ret
+end
+
+local function makeEsp(plant, mutation)
+    if not plant:IsA("Model") then return end
+    local base = plant:FindFirstChildWhichIsA("BasePart") or plant.PrimaryPart
+    if not base then return end
+
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "MutationESP"
+    gui.AlwaysOnTop = true
+    gui.Size = UDim2.new(0, 80, 0, 20)
+    gui.StudsOffset = Vector3.new(0, 4, 0)
+    gui.Adornee = base
+
+    local label = Instance.new("TextLabel", gui)
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = mutation
+    label.TextColor3 = mutationColors[mutation] or Color3.new(1,1,1)
+    label.TextStrokeTransparency = 0.4
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+
+    gui.Parent = base
+    plantEsp[plant] = gui
+end
+
+local function updateMutationEsp()
+    clearPlantEsp()
+    local plants = getPhysicalPlants()
+    for _, plant in ipairs(plants) do
+        for _, mutation in ipairs(mutations) do
+            if plant:GetAttribute(mutation) == true then
+                makeEsp(plant, mutation)
+                break
+            end
+        end
+    end
+end
+
+local espEnabled = false
+local espConn
+
+espToggle.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    if espEnabled then
+        espToggle.Text = "Disable Mutation ESP"
+        espToggle.BackgroundColor3 = Theme.Accent2
+        updateMutationEsp()
+        espConn = game:GetService("RunService").RenderStepped:Connect(function()
+            updateMutationEsp()
+        end)
+    else
+        espToggle.Text = "Enable Mutation ESP"
+        espToggle.BackgroundColor3 = Theme.Button
+        clearPlantEsp()
+        if espConn then espConn:Disconnect() espConn = nil end
+    end
+end)
+
+
 
 
 -- === DRAGGABLE MAIN FRAME ===
