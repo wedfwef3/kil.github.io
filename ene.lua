@@ -771,30 +771,7 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === Mutation ESP Tab with Plasma, Disco, Zombified Support ===
-local mutations = {
-    "Wet", "Gold", "Frozen", "Rainbow", "Choc", "Chilled",
-    "Shocked", "Moonlit", "Bloodlit", "Celestial", "Disco", "Zombified", "Plasma"
-}
-local mutationColors = {
-    Wet = Color3.fromRGB(100,200,255),
-    Gold = Color3.fromRGB(255, 215, 0),
-    Frozen = Color3.fromRGB(135, 206, 235),
-    Rainbow = Color3.fromRGB(255, 0, 255),
-    Choc = Color3.fromRGB(120,72,0),
-    Chilled = Color3.fromRGB(170,230,255),
-    Shocked = Color3.fromRGB(255,255,100),
-    Moonlit = Color3.fromRGB(150,100,255),
-    Bloodlit = Color3.fromRGB(200,10,60),
-    Celestial = Color3.fromRGB(200,255,255),
-    Disco = Color3.fromRGB(255,120,255),
-    Zombified = Color3.fromRGB(80,255,100),
-    Plasma = Color3.fromRGB(60, 255, 255)
-}
-
-
-
--- === MUTATION ESP TAB (Simple, matches UI style, button toggles ESP) ===
+-- Mutation ESP Tab (with toggle button and compact ESP)
 local EspTab = CreateTab("Mutation ESP")
 
 local espToggle = Instance.new("TextButton", EspTab)
@@ -807,122 +784,73 @@ espToggle.TextSize = 22
 espToggle.Text = "Start Mutation ESP"
 Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 8)
 
-local mutations = {
-    "Wet", "Gold", "Frozen", "Rainbow", "Choc", "Chilled",
-    "Shocked", "Moonlit", "Bloodlit", "Celestial", "Disco", "Zombified", "Plasma"
-}
-local mutationColors = {
-    Wet = Color3.fromRGB(100,200,255),
-    Gold = Color3.fromRGB(255, 215, 0),
-    Frozen = Color3.fromRGB(135, 206, 235),
-    Rainbow = Color3.fromRGB(255, 0, 255),
-    Choc = Color3.fromRGB(120,72,0),
-    Chilled = Color3.fromRGB(170,230,255),
-    Shocked = Color3.fromRGB(255,255,100),
-    Moonlit = Color3.fromRGB(150,100,255),
-    Bloodlit = Color3.fromRGB(200,10,60),
-    Celestial = Color3.fromRGB(200,255,255),
-    Disco = Color3.fromRGB(255,120,255),
-    Zombified = Color3.fromRGB(80,255,100),
-    Plasma = Color3.fromRGB(60, 255, 255)
-}
+local espRunning = false
+local espThread
 
-local espEnabled = false
-local espConn
-local plantEsp = {}
+local m={"Wet","Gold","Frozen","Rainbow","Choc","Chilled","Shocked","Moonlit","Bloodlit","Celestial","Disco","Zombified","Plasma"}
+local c={Wet=Color3.fromRGB(100,200,255),Gold=Color3.fromRGB(255,215,0),Frozen=Color3.fromRGB(135,206,235),Rainbow=Color3.fromRGB(255,0,255),Choc=Color3.fromRGB(120,72,0),Chilled=Color3.fromRGB(170,230,255),Shocked=Color3.fromRGB(255,255,100),Moonlit=Color3.fromRGB(150,100,255),Bloodlit=Color3.fromRGB(200,10,60),Celestial=Color3.fromRGB(200,255,255),Disco=Color3.fromRGB(255,120,255),Zombified=Color3.fromRGB(80,255,100),Plasma=Color3.fromRGB(60,255,255)}
+local p=game.Players.LocalPlayer
 
-local function clearPlantEsp()
-    for plant, gui in pairs(plantEsp) do
-        if gui and gui.Parent then gui:Destroy() end
-    end
-    plantEsp = {}
-end
-
-local function getMyGarden()
-    for _, farm in ipairs(workspace.Farm:GetChildren()) do
-        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
-        if data and data:FindFirstChild("Owner") and data.Owner.Value == localPlayer.Name then
-            return farm
-        end
-    end
-    return nil
-end
-
-local function getPhysicalPlants()
-    local garden = getMyGarden()
-    local ret = {}
-    if garden then
-        local plantsFolder = garden:FindFirstChild("Important") and garden.Important:FindFirstChild("Plants_Physical")
-        if plantsFolder then
-            for _, plant in ipairs(plantsFolder:GetChildren()) do
-                table.insert(ret, plant)
-            end
-        end
-    end
-    return ret
-end
-
-local function getMutationColor(mutationsFound)
-    if #mutationsFound == 1 then
-        return mutationColors[mutationsFound[1]] or Color3.new(1,1,1)
-    else
-        return Color3.new(1,1,1)
+local function clr()
+    for _,v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BillboardGui") and v.Name=="MutationESP" then v:Destroy() end
     end
 end
-
-local function makeEsp(plant, mutationsFound)
-    if not plant:IsA("Model") then return end
-    local base = plant:FindFirstChildWhichIsA("BasePart") or plant.PrimaryPart
-    if not base then return end
-
-    local gui = Instance.new("BillboardGui")
-    gui.Name = "MutationESP"
-    gui.AlwaysOnTop = true
-    gui.Size = UDim2.new(0, 240, 0, 50)
-    gui.StudsOffset = Vector3.new(0, 7, 0)
-    gui.Adornee = base
-
-    local label = Instance.new("TextLabel", gui)
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.Text = table.concat(mutationsFound, " + ")
-    label.TextColor3 = getMutationColor(mutationsFound)
-    label.TextStrokeTransparency = 0.4
-    label.TextScaled = true
-    label.Font = Enum.Font.GothamBold
-
-    gui.Parent = base
-    plantEsp[plant] = gui
-end
-
-local function updateMutationEsp()
-    clearPlantEsp()
-    local plants = getPhysicalPlants()
-    for _, plant in ipairs(plants) do
-        local found = {}
-        for _, mutation in ipairs(mutations) do
-            if plant:GetAttribute(mutation) == true then
-                table.insert(found, mutation)
-            end
-        end
-        if #found > 0 then
-            makeEsp(plant, found)
-        end
+local function grd()
+    for _,f in ipairs(workspace.Farm:GetChildren()) do
+        local d=f:FindFirstChild("Important") and f.Important:FindFirstChild("Data")
+        if d and d:FindFirstChild("Owner") and d.Owner.Value==p.Name then return f end
     end
 end
 
 espToggle.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    if espEnabled then
+    espRunning = not espRunning
+    if espRunning then
         espToggle.Text = "Disable Mutation ESP"
         espToggle.BackgroundColor3 = Theme.Accent2
-        updateMutationEsp()
-        espConn = game:GetService("RunService").RenderStepped:Connect(updateMutationEsp)
+        espThread = coroutine.create(function()
+            while espRunning do
+                clr()
+                local g=grd()
+                if g then
+                    local pl=g.Important:FindFirstChild("Plants_Physical")
+                    if pl then
+                        for _,pt in ipairs(pl:GetChildren()) do
+                            local fnd={}
+                            for _,mm in ipairs(m) do
+                                if pt:GetAttribute(mm) then table.insert(fnd,mm) end
+                            end
+                            if #fnd>0 then
+                                local bp=pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
+                                if bp then
+                                    local gui=Instance.new("BillboardGui")
+                                    gui.Name="MutationESP"
+                                    gui.Adornee=bp
+                                    gui.Size=UDim2.new(0,100,0,20)
+                                    gui.AlwaysOnTop=true
+                                    gui.StudsOffset=Vector3.new(0,6,0)
+                                    local lbl=Instance.new("TextLabel",gui)
+                                    lbl.Size=UDim2.new(1,0,1,0)
+                                    lbl.BackgroundTransparency=1
+                                    lbl.Text=table.concat(fnd," + ")
+                                    lbl.TextColor3=c[fnd[1]] or Color3.new(1,1,1)
+                                    lbl.TextScaled=false
+                                    lbl.TextSize=12
+                                    lbl.Font=Enum.Font.GothamBold
+                                    gui.Parent=bp
+                                end
+                            end
+                        end
+                    end
+                end
+                wait(2)
+            end
+        end)
+        coroutine.resume(espThread)
     else
         espToggle.Text = "Start Mutation ESP"
         espToggle.BackgroundColor3 = Theme.Button
-        clearPlantEsp()
-        if espConn then espConn:Disconnect() espConn = nil end
+        clr()
     end
 end)
 
