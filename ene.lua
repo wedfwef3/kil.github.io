@@ -491,67 +491,8 @@ autosell_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOCOLLECT TAB (NEW LOGIC) ===
+-- === AUTOCOLLECT TAB (TP + AUTOCOLLECT + OPTIONAL AUTOSELL) ===
 local AutocollectTab = CreateTab("Autocollect")
-local fastClickEnabled = false
-local fastClickThread
-local CLICK_DELAY = 0.00000001
-local MAX_DISTANCE = 50
-
-local function isInventoryFull()
-    return #localPlayer.Backpack:GetChildren() >= 200
-end
-
-local function isValidPrompt(prompt)
-    local parent = prompt.Parent
-    if not parent then return false end
-    local name = parent.Name:lower()
-    return not (name:find("sign") or name:find("core"))
-end
-
-local function getNearbyPrompts()
-    local nearby = {}
-    local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nearby end
-
-    for _, farm in pairs(workspace.Farm:GetChildren()) do
-        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
-        if data and data:FindFirstChild("Owner") and data.Owner.Value == localPlayer.Name then
-            for _, obj in pairs(farm:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") and isValidPrompt(obj) then
-                    local part = obj.Parent
-                    if part:IsA("BasePart") then
-                        local dist = (hrp.Position - part.Position).Magnitude
-                        if dist <= MAX_DISTANCE then
-                            table.insert(nearby, obj)
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nearby
-end
-
-local function fastClickFarm()
-    if fastClickThread then task.cancel(fastClickThread) end
-    fastClickThread = task.spawn(function()
-        while fastClickEnabled do
-            if isInventoryFull() then
-                task.wait(1)
-                continue
-            end
-            local prompts = getNearbyPrompts()
-            for _, prompt in pairs(prompts) do
-                if not fastClickEnabled then return end
-                if isInventoryFull() then break end
-                fireproximityprompt(prompt, 1)
-                task.wait(CLICK_DELAY)
-            end
-            task.wait(0.1)
-        end
-    end)
-end
 
 local autocollect_toggle = Instance.new("TextButton", AutocollectTab)
 autocollect_toggle.Size = UDim2.new(0.6, 0, 0, 38)
@@ -563,22 +504,145 @@ autocollect_toggle.TextSize = 18
 autocollect_toggle.Text = "Start Autocollect"
 Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
 
-autocollect_toggle.MouseButton1Click:Connect(function()
-    fastClickEnabled = not fastClickEnabled
-    if fastClickEnabled then
-        autocollect_toggle.Text = "Stop Autocollect"
-        autocollect_toggle.BackgroundColor3 = Theme.Accent2
-        fastClickFarm()
+-- Autosell toggle just below
+local autosell_collect_toggle = Instance.new("TextButton", AutocollectTab)
+autosell_collect_toggle.Size = UDim2.new(0.6, 0, 0, 32)
+autosell_collect_toggle.Position = UDim2.new(0, 16, 0, 76)
+autosell_collect_toggle.BackgroundColor3 = Theme.Button
+autosell_collect_toggle.TextColor3 = Theme.Text
+autosell_collect_toggle.Font = Enum.Font.Gotham
+autosell_collect_toggle.TextSize = 16
+autosell_collect_toggle.Text = "Autosell When Full: OFF"
+Instance.new("UICorner", autosell_collect_toggle).CornerRadius = UDim.new(0, 7)
+local autosell_when_full = false
+
+autosell_collect_toggle.MouseButton1Click:Connect(function()
+    autosell_when_full = not autosell_when_full
+    if autosell_when_full then
+        autosell_collect_toggle.Text = "Autosell When Full: ON"
+        autosell_collect_toggle.BackgroundColor3 = Theme.Accent
     else
-        autocollect_toggle.Text = "Start Autocollect"
-        autocollect_toggle.BackgroundColor3 = Theme.Button
-        if fastClickThread then
-            task.cancel(fastClickThread)
-            fastClickThread = nil
-        end
+        autosell_collect_toggle.Text = "Autosell When Full: OFF"
+        autosell_collect_toggle.BackgroundColor3 = Theme.Button
     end
 end)
 
+local collecting = false
+local collect_thread
+
+local function getMyFarm()
+    for _, farm in pairs(workspace.Farm:GetChildren()) do
+        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
+        if data and data:FindFirstChild("Owner") and data.Owner.Value == localPlayer.Name then
+            return farm
+        end
+    end
+    return nil
+end
+
+local function getMyHarvestableCrops()
+    local myFarm = getMyFarm()
+    local crops = {}
+    if myFarm then
+        local plants = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical")
+        if plants then
+            for _, plant in pairs(plants:GetChildren()) do
+                for _, part in pairs(plant:GetDescendants()) do
+                    if part:IsA("BasePart") and part:FindFirstChildOfClass("ProximityPrompt") then
+                        table.insert(crops, part)
+                        break
+                    end
+                end
+            end
+        end
+    end
+    return crops
+end
+
+local function isInventoryFull()
+    return #localPlayer.Backpack:GetChildren() >= 200
+end
+
+local function sellInventory()
+    -- Teleport to Steven or shop and sell inventory
+    local steven = workspace.NPCS:FindFirstChild("Steven")
+    local char = localPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if steven and hrp then
+        local oldCFrame = hrp.CFrame
+        hrp.CFrame = steven.HumanoidRootPart.CFrame + Vector3.new(0, 3, 3)
+        task.wait(0.4)
+        for i = 1, 4 do
+            pcall(function()
+                game:GetService("ReplicatedStorage").GameEvents.Sell_Inventory:FireServer()
+            end)
+            task.wait(0.15)
+        end
+        hrp.CFrame = oldCFrame
+    end
+end
+
+local function autoCollectLoop()
+    while collecting do
+        if isInventoryFull() then
+            if autosell_when_full then
+                autocollect_toggle.Text = "Autoselling..."
+                sellInventory()
+                -- Wait until not full
+                while collecting and isInventoryFull() do
+                    task.wait(0.5)
+                end
+                autocollect_toggle.Text = "Stop Autocollect"
+            else
+                autocollect_toggle.Text = "Backpack Full!"
+                -- Wait until user empties inventory
+                while collecting and isInventoryFull() do
+                    task.wait(0.5)
+                end
+                autocollect_toggle.Text = "Stop Autocollect"
+            end
+        end
+        if not collecting then break end
+
+        local crops = getMyHarvestableCrops()
+        for _, crop in ipairs(crops) do
+            if not collecting then return end
+            if isInventoryFull() then break end
+            local char = localPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp and crop and crop.Parent then
+                hrp.CFrame = CFrame.new(crop.Position + Vector3.new(0, 3, 0))
+                task.wait(0.15)
+                local prompt = crop:FindFirstChildOfClass("ProximityPrompt")
+                if prompt then
+                    pcall(function()
+                        fireproximityprompt(prompt)
+                    end)
+                    task.wait(0.1)
+                end
+            end
+        end
+        task.wait(0.2)
+    end
+    autocollect_toggle.Text = "Start Autocollect"
+    autocollect_toggle.BackgroundColor3 = Theme.Button
+end
+
+autocollect_toggle.MouseButton1Click:Connect(function()
+    collecting = not collecting
+    if collecting then
+        autocollect_toggle.Text = "Stop Autocollect"
+        autocollect_toggle.BackgroundColor3 = Theme.Accent2
+        collect_thread = task.spawn(autoCollectLoop)
+    else
+        autocollect_toggle.Text = "Start Autocollect"
+        autocollect_toggle.BackgroundColor3 = Theme.Button
+        if collect_thread then
+            task.cancel(collect_thread)
+            collect_thread = nil
+        end
+    end
+end)
 
 -- === AUTOBUY GEARS TAB ===
 local gears = {
