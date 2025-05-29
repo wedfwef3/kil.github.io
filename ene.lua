@@ -792,18 +792,44 @@ local mutationColors = {
     Plasma = Color3.fromRGB(60, 255, 255)
 }
 
+
+-- === MUTATION ESP TAB (toggle persists when switching tabs, only button controls ESP) ===
+local mutations = {
+    "Wet", "Gold", "Frozen", "Rainbow", "Choc", "Chilled",
+    "Shocked", "Moonlit", "Bloodlit", "Celestial", "Disco", "Zombified", "Plasma"
+}
+local mutationColors = {
+    Wet = Color3.fromRGB(100,200,255),
+    Gold = Color3.fromRGB(255, 215, 0),
+    Frozen = Color3.fromRGB(135, 206, 235),
+    Rainbow = Color3.fromRGB(255, 0, 255),
+    Choc = Color3.fromRGB(120,72,0),
+    Chilled = Color3.fromRGB(170,230,255),
+    Shocked = Color3.fromRGB(255,255,100),
+    Moonlit = Color3.fromRGB(150,100,255),
+    Bloodlit = Color3.fromRGB(200,10,60),
+    Celestial = Color3.fromRGB(200,255,255),
+    Disco = Color3.fromRGB(255,120,255),
+    Zombified = Color3.fromRGB(80,255,100),
+    Plasma = Color3.fromRGB(60, 255, 255)
+}
+
+-- Create Tab
 local EspTab = CreateTab("Mutation ESP")
 local espToggle = Instance.new("TextButton", EspTab)
-espToggle.Size = UDim2.new(0.6, 0, 0, 38)
-espToggle.Position = UDim2.new(0, 16, 0, 30)
+espToggle.Size = UDim2.new(0.7, 0, 0, 46)
+espToggle.Position = UDim2.new(0.15, 0, 0, 32)
 espToggle.BackgroundColor3 = Theme.Button
 espToggle.TextColor3 = Theme.Text
 espToggle.Font = Enum.Font.GothamBold
-espToggle.TextSize = 18
+espToggle.TextSize = 22
 espToggle.Text = "Enable Mutation ESP"
-Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 8)
 
+-- ESP Logic
 local plantEsp = {}
+local espEnabled = false
+local espConn
 
 local function clearPlantEsp()
     for plant,gui in pairs(plantEsp) do
@@ -836,7 +862,15 @@ local function getPhysicalPlants()
     return ret
 end
 
-local function makeEsp(plant, mutation)
+local function getMutationColor(mutationsFound)
+    if #mutationsFound == 1 then
+        return mutationColors[mutationsFound[1]] or Color3.new(1,1,1)
+    else
+        return Color3.new(1,1,1)
+    end
+end
+
+local function makeEsp(plant, mutationsFound)
     if not plant:IsA("Model") then return end
     local base = plant:FindFirstChildWhichIsA("BasePart") or plant.PrimaryPart
     if not base then return end
@@ -844,15 +878,15 @@ local function makeEsp(plant, mutation)
     local gui = Instance.new("BillboardGui")
     gui.Name = "MutationESP"
     gui.AlwaysOnTop = true
-    gui.Size = UDim2.new(0, 80, 0, 20)
-    gui.StudsOffset = Vector3.new(0, 4, 0)
+    gui.Size = UDim2.new(0, 240, 0, 50)
+    gui.StudsOffset = Vector3.new(0, 7, 0)
     gui.Adornee = base
 
     local label = Instance.new("TextLabel", gui)
     label.Size = UDim2.new(1,0,1,0)
     label.BackgroundTransparency = 1
-    label.Text = mutation
-    label.TextColor3 = mutationColors[mutation] or Color3.new(1,1,1)
+    label.Text = table.concat(mutationsFound, " + ")
+    label.TextColor3 = getMutationColor(mutationsFound)
     label.TextStrokeTransparency = 0.4
     label.TextScaled = true
     label.Font = Enum.Font.GothamBold
@@ -865,17 +899,17 @@ local function updateMutationEsp()
     clearPlantEsp()
     local plants = getPhysicalPlants()
     for _, plant in ipairs(plants) do
+        local found = {}
         for _, mutation in ipairs(mutations) do
             if plant:GetAttribute(mutation) == true then
-                makeEsp(plant, mutation)
-                break
+                table.insert(found, mutation)
             end
+        end
+        if #found > 0 then
+            makeEsp(plant, found)
         end
     end
 end
-
-local espEnabled = false
-local espConn
 
 espToggle.MouseButton1Click:Connect(function()
     espEnabled = not espEnabled
@@ -883,9 +917,7 @@ espToggle.MouseButton1Click:Connect(function()
         espToggle.Text = "Disable Mutation ESP"
         espToggle.BackgroundColor3 = Theme.Accent2
         updateMutationEsp()
-        espConn = game:GetService("RunService").RenderStepped:Connect(function()
-            updateMutationEsp()
-        end)
+        espConn = game:GetService("RunService").RenderStepped:Connect(updateMutationEsp)
     else
         espToggle.Text = "Enable Mutation ESP"
         espToggle.BackgroundColor3 = Theme.Button
@@ -893,7 +925,6 @@ espToggle.MouseButton1Click:Connect(function()
         if espConn then espConn:Disconnect() espConn = nil end
     end
 end)
-
 
 
 
