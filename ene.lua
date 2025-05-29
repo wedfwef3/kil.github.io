@@ -121,6 +121,40 @@ local autobuy_running = false
 local autobuy_thread
 
 local AutobuyLabel = Instance.new("TextLabel", AutobuyTab)
+-- Money Bar for Autobuy Tab (docks bottom right and moves with UI)
+local leaderstats = localPlayer:FindFirstChild("leaderstats") or localPlayer:WaitForChild("leaderstats")
+local shecklesStat = leaderstats:FindFirstChild("Sheckles") or leaderstats:WaitForChild("Sheckles")
+
+local moneyBar = Instance.new("Frame", AutobuyTab)
+moneyBar.Size = UDim2.new(0, 140, 0, 32)
+moneyBar.AnchorPoint = Vector2.new(1, 1)
+moneyBar.Position = UDim2.new(1, -12, 1, -12)
+moneyBar.BackgroundColor3 = Theme.Button
+moneyBar.BackgroundTransparency = 0.08
+moneyBar.BorderSizePixel = 0
+moneyBar.ZIndex = 2
+Instance.new("UICorner", moneyBar).CornerRadius = UDim.new(0, 9)
+
+local moneyLabel = Instance.new("TextLabel", moneyBar)
+moneyLabel.Size = UDim2.new(1, -18, 1, 0)
+moneyLabel.Position = UDim2.new(0, 9, 0, 0)
+moneyLabel.BackgroundTransparency = 1
+moneyLabel.TextColor3 = Theme.Accent
+moneyLabel.TextStrokeTransparency = 0.8
+moneyLabel.Font = Enum.Font.GothamBold
+moneyLabel.TextSize = 18
+moneyLabel.TextXAlignment = Enum.TextXAlignment.Right
+moneyLabel.Text = "$0"
+moneyLabel.ZIndex = 3
+
+-- Update loop
+task.spawn(function()
+    while true do
+        local money = shecklesStat.Value
+        moneyLabel.Text = ("$%s"):format(tostring(money):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
+        task.wait(1)
+    end
+end)
 AutobuyLabel.Text = "Select seeds to autobuy:"
 AutobuyLabel.Size = UDim2.new(1, -20, 0, 28)
 AutobuyLabel.Position = UDim2.new(0,10,0,6)
