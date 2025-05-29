@@ -793,7 +793,20 @@ local mutationColors = {
 }
 
 
--- === MUTATION ESP TAB (toggle persists when switching tabs, only button controls ESP) ===
+
+-- === MUTATION ESP TAB (Simple, matches UI style, button toggles ESP) ===
+local EspTab = CreateTab("Mutation ESP")
+
+local espToggle = Instance.new("TextButton", EspTab)
+espToggle.Size = UDim2.new(0.7, 0, 0, 46)
+espToggle.Position = UDim2.new(0.15, 0, 0, 32)
+espToggle.BackgroundColor3 = Theme.Button
+espToggle.TextColor3 = Theme.Text
+espToggle.Font = Enum.Font.GothamBold
+espToggle.TextSize = 22
+espToggle.Text = "Start Mutation ESP"
+Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 8)
+
 local mutations = {
     "Wet", "Gold", "Frozen", "Rainbow", "Choc", "Chilled",
     "Shocked", "Moonlit", "Bloodlit", "Celestial", "Disco", "Zombified", "Plasma"
@@ -814,25 +827,12 @@ local mutationColors = {
     Plasma = Color3.fromRGB(60, 255, 255)
 }
 
--- Create Tab
-local EspTab = CreateTab("Mutation ESP")
-local espToggle = Instance.new("TextButton", EspTab)
-espToggle.Size = UDim2.new(0.7, 0, 0, 46)
-espToggle.Position = UDim2.new(0.15, 0, 0, 32)
-espToggle.BackgroundColor3 = Theme.Button
-espToggle.TextColor3 = Theme.Text
-espToggle.Font = Enum.Font.GothamBold
-espToggle.TextSize = 22
-espToggle.Text = "Enable Mutation ESP"
-Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 8)
-
--- ESP Logic
-local plantEsp = {}
 local espEnabled = false
 local espConn
+local plantEsp = {}
 
 local function clearPlantEsp()
-    for plant,gui in pairs(plantEsp) do
+    for plant, gui in pairs(plantEsp) do
         if gui and gui.Parent then gui:Destroy() end
     end
     plantEsp = {}
@@ -919,13 +919,12 @@ espToggle.MouseButton1Click:Connect(function()
         updateMutationEsp()
         espConn = game:GetService("RunService").RenderStepped:Connect(updateMutationEsp)
     else
-        espToggle.Text = "Enable Mutation ESP"
+        espToggle.Text = "Start Mutation ESP"
         espToggle.BackgroundColor3 = Theme.Button
         clearPlantEsp()
         if espConn then espConn:Disconnect() espConn = nil end
     end
 end)
-
 
 
 -- === DRAGGABLE MAIN FRAME ===
