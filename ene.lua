@@ -1037,6 +1037,243 @@ autoHopToggle.MouseButton1Click:Connect(function()
 end)
 
 
+-- === WEBHOOK TAB (Totals Only, No Deltas) ===
+local HttpService = game:GetService("HttpService")
+local webhookReq = (syn and syn.request) or (http and http.request) or http_request or request or httprequest
+
+local trackedItems = {
+    "Carrot","Strawberry","Blueberry","Orange Tulip","Tomato","Corn","Daffodil","Watermelon","Pumpkin","Apple",
+    "Bamboo","Coconut","Cactus","Dragon Fruit","Mango","Grape","Mushroom","Pepper","Cacao","Beanstalk"
+}
+
+local WebhookTab = CreateTab("Webhook")
+
+-- BIG Webhook Box
+local webhookFrame = Instance.new("Frame", WebhookTab)
+webhookFrame.Size = UDim2.new(1, -40, 0, 64)
+webhookFrame.Position = UDim2.new(0, 20, 0, 28)
+webhookFrame.BackgroundColor3 = Theme.Button
+Instance.new("UICorner", webhookFrame).CornerRadius = UDim.new(0, 12)
+
+local webhookBox = Instance.new("TextBox", webhookFrame)
+webhookBox.Size = UDim2.new(1, -54, 1, -0)
+webhookBox.Position = UDim2.new(0, 12, 0, 0)
+webhookBox.BackgroundTransparency = 1
+webhookBox.TextColor3 = Theme.Text
+webhookBox.Font = Enum.Font.Gotham
+webhookBox.TextSize = 18
+webhookBox.Text = ""
+webhookBox.PlaceholderText = "Paste your Discord webhook here..."
+webhookBox.ClearTextOnFocus = false
+
+local checkBtn = Instance.new("TextButton", webhookFrame)
+checkBtn.Size = UDim2.new(0, 44, 0, 44)
+checkBtn.Position = UDim2.new(1, -50, 0.5, -22)
+checkBtn.BackgroundColor3 = Theme.Accent
+checkBtn.TextColor3 = Theme.Text
+checkBtn.Font = Enum.Font.GothamBold
+checkBtn.TextSize = 28
+checkBtn.Text = "✔"
+Instance.new("UICorner", checkBtn).CornerRadius = UDim.new(0, 12)
+
+local notifLabel = Instance.new("TextLabel", WebhookTab)
+notifLabel.Size = UDim2.new(1, -40, 0, 22)
+notifLabel.Position = UDim2.new(0, 20, 0, 100)
+notifLabel.BackgroundTransparency = 1
+notifLabel.TextColor3 = Theme.Accent2
+notifLabel.Font = Enum.Font.Gotham
+notifLabel.TextSize = 16
+notifLabel.Text = ""
+notifLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- === Slider for notification interval ===
+local sliderFrame = Instance.new("Frame", WebhookTab)
+sliderFrame.Size = UDim2.new(1, -40, 0, 38)
+sliderFrame.Position = UDim2.new(0, 20, 1, -70)
+sliderFrame.BackgroundColor3 = Theme.Button
+Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 10)
+
+local sliderBar = Instance.new("Frame", sliderFrame)
+sliderBar.Size = UDim2.new(0, 24, 1, -10)
+sliderBar.Position = UDim2.new(0, 6, 0, 5)
+sliderBar.BackgroundColor3 = Theme.Accent
+Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 8)
+
+local sliderLabel = Instance.new("TextLabel", sliderFrame)
+sliderLabel.Size = UDim2.new(1, -50, 1, 0)
+sliderLabel.Position = UDim2.new(0, 42, 0, 0)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.TextColor3 = Theme.Text
+sliderLabel.Font = Enum.Font.Gotham
+sliderLabel.TextSize = 17
+sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel.Text = "Send notification every 3 minutes"
+
+local sliderDragging = false
+local sliderValue = 3 -- default (minutes)
+
+local function updateSlider(posX)
+    local sx = math.clamp(posX - sliderFrame.AbsolutePosition.X - 6, 0, sliderFrame.AbsoluteSize.X - 50)
+    sliderBar.Position = UDim2.new(0, 6 + sx, 0, 5)
+    sliderValue = math.clamp(math.floor(1 + (sx / (sliderFrame.AbsoluteSize.X - 50)) * 59 + 0.5), 1, 60)
+    sliderLabel.Text = ("Send notification every %dm"):format(sliderValue)
+end
+sliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        sliderDragging = true
+    end
+end)
+sliderBar.InputEnded:Connect(function(input)
+    sliderDragging = false
+end)
+sliderFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        sliderDragging = true
+        updateSlider(input.Position.X)
+    end
+end)
+sliderFrame.InputEnded:Connect(function(input)
+    sliderDragging = false
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if sliderDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        updateSlider(input.Position.X)
+    end
+end)
+
+-- === Core Webhook Logic ===
+local leaderstats = localPlayer:WaitForChild("leaderstats")
+local shecklesStat = leaderstats:WaitForChild("Sheckles")
+
+local itemTotals = {} -- Holds total lifetime pickups
+for _, v in ipairs(trackedItems) do itemTotals[v] = 0 end
+
+local webhookActive = false
+local webhookUrl = ""
+local trackerThread = nil
+local sessionStart = tick()
+
+-- For this kind of game, you should have a place in your code where you detect when you "buy" or "collect" an item and increment itemTotals[itemName] by 1!  
+-- If you can't, then just sum up your inventory ever interval.
+
+-- Sum up what you have in your inventory (useful for one-time setup, or if you want to cheat and add all in backpack)
+local function getCurrentInventory()
+    local counts = {}
+    for _, itemName in ipairs(trackedItems) do
+        counts[itemName] = 0
+    end
+    for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
+        local name = item:GetAttribute("Seed") or item.Name
+        if counts[name] ~= nil then
+            counts[name] = counts[name] + 1
+        end
+    end
+    return counts
+end
+
+-- Format totals as a code block
+local function formatTotals()
+    local lines = {}
+    for _, item in ipairs(trackedItems) do
+        table.insert(lines, ("%s: %d"):format(item, itemTotals[item] or 0))
+    end
+    return table.concat(lines, "\n")
+end
+
+local function fmt(n)
+    if n >= 1e9 then return ("%.2fB"):format(n/1e9)
+    elseif n >= 1e6 then return ("%.2fM"):format(n/1e6)
+    elseif n >= 1e3 then return ("%.2fK"):format(n/1e3)
+    else return tostring(n)
+    end
+end
+
+local function sendWebhook(currentMoney, uptime)
+    if webhookUrl == "" then return end
+    local embed = {
+        title = "Garden Item Totals",
+        color = 0x48db6a,
+        fields = {
+            { name = "Total Money", value = fmt(currentMoney), inline = false },
+            { name = "Item Totals", value = ("```%s```"):format(formatTotals()), inline = false },
+            { name = "Session Uptime", value = uptime, inline = false }
+        }
+    }
+    local payload = { embeds = {embed} }
+    local success, err = pcall(function()
+        webhookReq{
+            Url = webhookUrl,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = HttpService:JSONEncode(payload)
+        }
+    end)
+    if success then
+        notifLabel.Text = "✅ Webhook sent!"
+    else
+        notifLabel.Text = "❌ Failed to send webhook."
+    end
+end
+
+local function updateTotalsByInventory()
+    -- Optionally: If you want to always sum what's in your backpack and treat that as your totals (not ideal for true "lifetime" stats).
+    local inv = getCurrentInventory()
+    for _, item in ipairs(trackedItems) do
+        itemTotals[item] = inv[item]
+    end
+end
+
+local function updateTotalsByEvent()
+    -- If you have an event like "OnItemBought" or "OnItemCollected", do:
+    -- itemTotals[itemName] = (itemTotals[itemName] or 0) + amount
+end
+
+local function startWebhook()
+    webhookActive = true
+    notifLabel.Text = "Webhook tracking started."
+    sessionStart = tick()
+    if trackerThread then
+        task.cancel(trackerThread)
+    end
+    -- First run: populate totals with what's in backpack, or start at 0 (your choice)
+    updateTotalsByInventory()
+    trackerThread = task.spawn(function()
+        while webhookActive do
+            for i = 1, sliderValue * 60 do
+                if not webhookActive then return end
+                task.wait(1)
+            end
+            -- Optionally: updateTotalsByInventory() -- uncomment if you always want to report current backpack
+            local nowMoney = shecklesStat.Value
+            local uptime = os.date("!%X", math.floor(tick() - sessionStart))
+            sendWebhook(nowMoney, uptime)
+        end
+    end)
+end
+
+local function stopWebhook()
+    webhookActive = false
+    notifLabel.Text = "Webhook tracking stopped."
+    if trackerThread then
+        task.cancel(trackerThread)
+        trackerThread = nil
+    end
+end
+
+checkBtn.MouseButton1Click:Connect(function()
+    local url = webhookBox.Text
+    if url == "" or not url:find("discord.com/api/webhooks/") then
+        notifLabel.Text = "❌ Please enter a valid Discord webhook URL!"
+        return
+    end
+    webhookUrl = url
+    notifLabel.Text = "Webhook set! ✔️"
+    stopWebhook()
+    startWebhook()
+end)
+
+
+
 -- === DRAGGABLE MAIN FRAME ===
 local dragging = false
 local dragStart, startPos, dragInput
