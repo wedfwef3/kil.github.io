@@ -806,9 +806,107 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
 end)
 
 
--- === MAIN TAB (all ESP/collect buttons) ===
+-- === MAIN TAB (all ESP/collect buttons + Honey Shop Autobuy on top) ===
 local MainTab = CreateTab("Main")
 
+local honeyShopItems = {
+    "Flower Seed Pack",
+    "Nectarine",
+    "Hive Fruit",
+    "Honey Sprinkler",
+    "Bee Egg",
+    "Bee Crate",
+    "Honey Comb",
+    "Bee Chair",
+    "Honey Torch",
+    "Honey Walkway"
+}
+
+-- State for autobuy checkboxes
+local autobuy_honey_selected = {}
+for _, item in ipairs(honeyShopItems) do
+    autobuy_honey_selected[item] = false
+end
+local autobuy_honey_running = false
+local autobuy_honey_thread
+
+-- Label above the checkboxes
+local AutobuyHoneyLabel = Instance.new("TextLabel", MainTab)
+AutobuyHoneyLabel.Text = "Autobuy Honey Shop Items:"
+AutobuyHoneyLabel.Size = UDim2.new(0.7, 0, 0, 22)
+AutobuyHoneyLabel.Position = UDim2.new(0.15, 0, 0, 6)
+AutobuyHoneyLabel.BackgroundTransparency = 1
+AutobuyHoneyLabel.TextColor3 = Theme.Text
+AutobuyHoneyLabel.Font = Enum.Font.GothamBold
+AutobuyHoneyLabel.TextSize = 16
+AutobuyHoneyLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Checkboxes for honey shop items
+local honey_checkboxes = {}
+for i, item in ipairs(honeyShopItems) do
+    local cb = Instance.new("TextButton", MainTab)
+    cb.Size = UDim2.new(0.5, 0, 0, 20)
+    cb.Position = UDim2.new(0.15, 0, 0, 28 + (i-1)*22)
+    cb.BackgroundColor3 = Theme.Button
+    cb.TextColor3 = Theme.Text
+    cb.Font = Enum.Font.Gotham
+    cb.TextSize = 14
+    cb.Text = "[  ] " .. item
+    cb.AutoButtonColor = true
+    honey_checkboxes[item] = cb
+
+    cb.MouseButton1Click:Connect(function()
+        autobuy_honey_selected[item] = not autobuy_honey_selected[item]
+        cb.Text = autobuy_honey_selected[item] and "[✔] "..item or "[  ] "..item
+        cb.BackgroundColor3 = autobuy_honey_selected[item] and Theme.Accent or Theme.Button
+    end)
+end
+
+local function get_autobuy_honey_list()
+    local t = {}
+    for _, item in ipairs(honeyShopItems) do
+        if autobuy_honey_selected[item] then
+            table.insert(t, item)
+        end
+    end
+    return t
+end
+
+-- Autobuy button
+local autobuy_honey_toggle = Instance.new("TextButton", MainTab)
+autobuy_honey_toggle.Size = UDim2.new(0.36, 0, 0, 28)
+autobuy_honey_toggle.Position = UDim2.new(0.62, 0, 0, 28 + #honeyShopItems*22)
+autobuy_honey_toggle.BackgroundColor3 = Theme.Button
+autobuy_honey_toggle.TextColor3 = Theme.Text
+autobuy_honey_toggle.Font = Enum.Font.GothamBold
+autobuy_honey_toggle.TextSize = 15
+autobuy_honey_toggle.Text = "Start Autobuy"
+Instance.new("UICorner", autobuy_honey_toggle).CornerRadius = UDim.new(0, 7)
+
+autobuy_honey_toggle.MouseButton1Click:Connect(function()
+    if not autobuy_honey_running then
+        autobuy_honey_running = true
+        autobuy_honey_toggle.Text = "Stop Autobuy"
+        autobuy_honey_toggle.BackgroundColor3 = Theme.Accent2
+        autobuy_honey_thread = task.spawn(function()
+            while autobuy_honey_running do
+                local list = get_autobuy_honey_list()
+                for _, item in ipairs(list) do
+                    game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuyEventShopStock"):FireServer(item)
+                    task.wait(0.15)
+                end
+                task.wait(1)
+            end
+        end)
+    else
+        autobuy_honey_running = false
+        autobuy_honey_toggle.Text = "Start Autobuy"
+        autobuy_honey_toggle.BackgroundColor3 = Theme.Button
+    end
+end)
+
+-- Calculate the offset for the next button (the rest of the main tab)
+local baseY = 36 + #honeyShopItems*22
 
 local function clr()
     for _, v in ipairs(workspace:GetDescendants()) do
@@ -829,7 +927,7 @@ local c = {
 ----------------------
 local mutEspBtn = Instance.new("TextButton", MainTab)
 mutEspBtn.Size = UDim2.new(0.7, 0, 0, 38)
-mutEspBtn.Position = UDim2.new(0.15, 0, 0, 28)
+mutEspBtn.Position = UDim2.new(0.15, 0, 0, baseY + 0)
 mutEspBtn.BackgroundColor3 = Theme.Button
 mutEspBtn.TextColor3 = Theme.Text
 mutEspBtn.Font = Enum.Font.GothamBold
@@ -900,7 +998,7 @@ end)
 -----------------------
 local honeyEspBtn = Instance.new("TextButton", MainTab)
 honeyEspBtn.Size = UDim2.new(0.7, 0, 0, 38)
-honeyEspBtn.Position = UDim2.new(0.15, 0, 0, 74)
+honeyEspBtn.Position = UDim2.new(0.15, 0, 0, baseY + 46)
 honeyEspBtn.BackgroundColor3 = Theme.Button
 honeyEspBtn.TextColor3 = Theme.Text
 honeyEspBtn.Font = Enum.Font.GothamBold
@@ -967,7 +1065,7 @@ end)
 -----------------------
 local honeyCollectBtn = Instance.new("TextButton", MainTab)
 honeyCollectBtn.Size = UDim2.new(0.7, 0, 0, 38)
-honeyCollectBtn.Position = UDim2.new(0.15, 0, 0, 120)
+honeyCollectBtn.Position = UDim2.new(0.15, 0, 0, baseY + 92)
 honeyCollectBtn.BackgroundColor3 = Theme.Button
 honeyCollectBtn.TextColor3 = Theme.Text
 honeyCollectBtn.Font = Enum.Font.GothamBold
@@ -1091,6 +1189,7 @@ honeyCollectBtn.MouseButton1Click:Connect(function()
         clr()
     end
 end)
+
 
 
 
