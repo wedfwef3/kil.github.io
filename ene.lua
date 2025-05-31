@@ -889,92 +889,189 @@ espToggle.MouseButton1Click:Connect(function()
 end)
 
 
--- === SETTINGS TAB (renamed from SERVER) ===
-local SettingsTab = CreateTab("Settings") -- Changed tab name
-
--- "Join Low Server" button
-local joinLowBtn = Instance.new("TextButton", SettingsTab)
-joinLowBtn.Size = UDim2.new(0, 180, 0, 38)
-joinLowBtn.Position = UDim2.new(0, 20, 0, 20)
-joinLowBtn.BackgroundColor3 = Theme.Button
-joinLowBtn.TextColor3 = Theme.Text
-joinLowBtn.Font = Enum.Font.GothamBold
-joinLowBtn.TextSize = 18
-joinLowBtn.Text = "Join Low Server"
-Instance.new("UICorner", joinLowBtn).CornerRadius = UDim.new(0, 7)
-
--- Server hop logic (low server join)
 local HttpService = game:GetService("HttpService")
-local TeleportService = game:GetService("TeleportService")
-local PlaceId = game.PlaceId
-local Players = game:GetService("Players")
-local function getLowestServer()
-    local servers = {}
-    local cursor = nil
-    repeat
-        local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-        if cursor then url = url.."&cursor="..cursor end
-        local data = HttpService:JSONDecode(game:HttpGet(url))
-        for _, server in ipairs(data.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                table.insert(servers, { id = server.id, playing = server.playing })
-            end
-        end
-        cursor = data.nextPageCursor
-    until not cursor or #servers > 0
-    table.sort(servers, function(a, b) return a.playing < b.playing end)
-    return servers[1]
-end
-local function serverHop(target)
-    if target then
-        TeleportService:TeleportToPlaceInstance(PlaceId, target.id, Players.LocalPlayer)
+local SettingsTab = CreateTab("Settings")
+local Theme = Theme or {
+    Button = Color3.fromRGB(60,60,60),
+    Accent = Color3.fromRGB(140,180,240),
+    Accent2 = Color3.fromRGB(100,255,160),
+    Text = Color3.fromRGB(240,240,240)
+}
+
+-- Notification label for status messages
+local notifLabel = Instance.new("TextLabel", SettingsTab)
+notifLabel.Size = UDim2.new(1, -40, 0, 22)
+notifLabel.Position = UDim2.new(0, 20, 0, 12)
+notifLabel.BackgroundTransparency = 1
+notifLabel.TextColor3 = Theme.Accent2
+notifLabel.Font = Enum.Font.Gotham
+notifLabel.TextSize = 16
+notifLabel.Text = ""
+notifLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Sample toggles for Autobuy, Autosell, Autoplant
+local function makeToggle(name, y)
+    local toggleFrame = Instance.new("Frame", SettingsTab)
+    toggleFrame.Size = UDim2.new(0, 160, 0, 36)
+    toggleFrame.Position = UDim2.new(0, 20, 0, y)
+    toggleFrame.BackgroundColor3 = Theme.Button
+    Instance.new("UICorner", toggleFrame).CornerRadius = UDim.new(0, 12)
+
+    local toggleLabel = Instance.new("TextLabel", toggleFrame)
+    toggleLabel.Size = UDim2.new(1, -44, 1, 0)
+    toggleLabel.Position = UDim2.new(0, 12, 0, 0)
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.TextColor3 = Theme.Text
+    toggleLabel.Font = Enum.Font.Gotham
+    toggleLabel.TextSize = 18
+    toggleLabel.Text = name
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local toggleBtn = Instance.new("TextButton", toggleFrame)
+    toggleBtn.Size = UDim2.new(0, 28, 0, 28)
+    toggleBtn.Position = UDim2.new(1, -36, 0.5, -14)
+    toggleBtn.BackgroundColor3 = Theme.Accent
+    toggleBtn.TextColor3 = Theme.Text
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 18
+    toggleBtn.Text = "✗"
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+
+    local state = false
+    toggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        toggleBtn.Text = state and "✓" or "✗"
+        toggleBtn.BackgroundColor3 = state and Theme.Accent2 or Theme.Accent
+    end)
+
+    local toggle = {}
+    function toggle:Set(val)
+        state = val and true or false
+        toggleBtn.Text = state and "✓" or "✗"
+        toggleBtn.BackgroundColor3 = state and Theme.Accent2 or Theme.Accent
     end
+    function toggle:Get()
+        return state
+    end
+
+    return toggle
 end
 
-joinLowBtn.MouseButton1Click:Connect(function()
-    local target = getLowestServer()
-    if target then
-        joinLowBtn.Text = "Teleporting..."
-        serverHop(target)
-    else
-        joinLowBtn.Text = "No Server :("
-        wait(2)
-        joinLowBtn.Text = "Join Low Server"
+local autobuyToggle = makeToggle("Autobuy", 54)
+local autosellToggle = makeToggle("Autosell", 100)
+local autoplantToggle = makeToggle("Autoplant", 146)
+
+-- Webhook URL input box
+local webhookFrame = Instance.new("Frame", SettingsTab)
+webhookFrame.Size = UDim2.new(1, -40, 0, 44)
+webhookFrame.Position = UDim2.new(0, 20, 0, 196)
+webhookFrame.BackgroundColor3 = Theme.Button
+Instance.new("UICorner", webhookFrame).CornerRadius = UDim.new(0, 12)
+
+local webhookBox = Instance.new("TextBox", webhookFrame)
+webhookBox.Size = UDim2.new(1, -24, 1, 0)
+webhookBox.Position = UDim2.new(0, 12, 0, 0)
+webhookBox.BackgroundTransparency = 1
+webhookBox.TextColor3 = Theme.Text
+webhookBox.Font = Enum.Font.Gotham
+webhookBox.TextSize = 18
+webhookBox.Text = ""
+webhookBox.PlaceholderText = "Paste your Discord webhook here..."
+webhookBox.ClearTextOnFocus = false
+
+-- Example FARM/JOIN SERVER BUTTONS (keep your originals here if you want)
+local joinLowServerBtn = Instance.new("TextButton", SettingsTab)
+joinLowServerBtn.Size = UDim2.new(0, 180, 0, 36)
+joinLowServerBtn.Position = UDim2.new(0, 20, 0, 250)
+joinLowServerBtn.BackgroundColor3 = Theme.Accent
+joinLowServerBtn.TextColor3 = Theme.Text
+joinLowServerBtn.Font = Enum.Font.GothamBold
+joinLowServerBtn.TextSize = 18
+joinLowServerBtn.Text = "Join Low Server"
+Instance.new("UICorner", joinLowServerBtn).CornerRadius = UDim.new(0, 12)
+-- (Add your join low server logic here)
+
+local otherFarmBtn = Instance.new("TextButton", SettingsTab)
+otherFarmBtn.Size = UDim2.new(0, 180, 0, 36)
+otherFarmBtn.Position = UDim2.new(0, 220, 0, 250)
+otherFarmBtn.BackgroundColor3 = Theme.Button
+otherFarmBtn.TextColor3 = Theme.Text
+otherFarmBtn.Font = Enum.Font.GothamBold
+otherFarmBtn.TextSize = 18
+otherFarmBtn.Text = "Other Farm"
+Instance.new("UICorner", otherFarmBtn).CornerRadius = UDim.new(0, 12)
+-- (Add your other farm logic here)
+
+-- --- CONFIG SAVE/RESET SECTION ---
+local CONFIG_FILE = "MyGardenConfig.json"
+
+local function loadConfig()
+    if isfile(CONFIG_FILE) then
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(readfile(CONFIG_FILE))
+        end)
+        return ok and data or {}
     end
+    return {}
+end
+
+local function saveConfig(config)
+    writefile(CONFIG_FILE, HttpService:JSONEncode(config))
+end
+
+local function resetConfig()
+    if isfile(CONFIG_FILE) then delfile(CONFIG_FILE) end
+end
+
+-- Save Config Button
+local saveBtn = Instance.new("TextButton", SettingsTab)
+saveBtn.Size = UDim2.new(0, 120, 0, 36)
+saveBtn.Position = UDim2.new(0, 20, 0, 300)
+saveBtn.BackgroundColor3 = Theme.Accent
+saveBtn.TextColor3 = Theme.Text
+saveBtn.Font = Enum.Font.GothamBold
+saveBtn.TextSize = 18
+saveBtn.Text = "Save Config"
+Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 12)
+
+saveBtn.MouseButton1Click:Connect(function()
+    local config = {
+        autobuy = autobuyToggle:Get(),
+        autosell = autosellToggle:Get(),
+        autoplant = autoplantToggle:Get(),
+        webhook = webhookBox.Text,
+    }
+    saveConfig(config)
+    notifLabel.Text = "✅ Config saved!"
 end)
 
--- === REMOVE OTHER FARMS BUTTON ===
-local removeFarmsBtn = Instance.new("TextButton", SettingsTab)
-removeFarmsBtn.Size = UDim2.new(0, 180, 0, 38)
-removeFarmsBtn.Position = UDim2.new(0, 20, 0, 70)
-removeFarmsBtn.BackgroundColor3 = Theme.Button
-removeFarmsBtn.TextColor3 = Theme.Text
-removeFarmsBtn.Font = Enum.Font.GothamBold
-removeFarmsBtn.TextSize = 18
-removeFarmsBtn.Text = "Remove Other Farms"
-Instance.new("UICorner", removeFarmsBtn).CornerRadius = UDim.new(0, 7)
+-- Reset Config Button
+local resetBtn = Instance.new("TextButton", SettingsTab)
+resetBtn.Size = UDim2.new(0, 120, 0, 36)
+resetBtn.Position = UDim2.new(0, 160, 0, 300)
+resetBtn.BackgroundColor3 = Theme.Button
+resetBtn.TextColor3 = Theme.Text
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextSize = 18
+resetBtn.Text = "Reset Config"
+Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 12)
 
-local removeFarmsInfo = Instance.new("TextLabel", SettingsTab)
-removeFarmsInfo.Size = UDim2.new(0, 250, 0, 22)
-removeFarmsInfo.Position = UDim2.new(0, 20, 0, 112)
-removeFarmsInfo.BackgroundTransparency = 1
-removeFarmsInfo.TextColor3 = Theme.Accent
-removeFarmsInfo.Font = Enum.Font.Gotham
-removeFarmsInfo.TextSize = 14
-removeFarmsInfo.TextXAlignment = Enum.TextXAlignment.Left
-removeFarmsInfo.Text = "Remove other farms to fix lag"
+resetBtn.MouseButton1Click:Connect(function()
+    resetConfig()
+    autobuyToggle:Set(false)
+    autosellToggle:Set(false)
+    autoplantToggle:Set(false)
+    webhookBox.Text = ""
+    notifLabel.Text = "Config reset."
+end)
 
-removeFarmsBtn.MouseButton1Click:Connect(function()
-    local localPlayer = game.Players.LocalPlayer
-    for _, farm in pairs(workspace.Farm:GetChildren()) do
-        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
-        if data and data:FindFirstChild("Owner") and data.Owner.Value ~= localPlayer.Name then
-            farm:Destroy()
-        end
-    end
-    removeFarmsBtn.Text = "Farms Removed!"
-    wait(1.8)
-    removeFarmsBtn.Text = "Remove Other Farms"
+-- Auto-load config on script load
+task.spawn(function()
+    local config = loadConfig()
+    if config.autobuy ~= nil then autobuyToggle:Set(config.autobuy) end
+    if config.autosell ~= nil then autosellToggle:Set(config.autosell) end
+    if config.autoplant ~= nil then autoplantToggle:Set(config.autoplant) end
+    if config.webhook then webhookBox.Text = config.webhook end
 end)
 
 
