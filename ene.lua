@@ -805,26 +805,25 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === MAIN TAB (formerly Mutation ESP) ===
+
+-- === MAIN TAB (all ESP/collect buttons) ===
 local MainTab = CreateTab("Main")
 
-local espToggle = Instance.new("TextButton", MainTab)
-espToggle.Size = UDim2.new(0.7, 0, 0, 46)
-espToggle.Position = UDim2.new(0.15, 0, 0, 32)
-espToggle.BackgroundColor3 = Theme.Button
-espToggle.TextColor3 = Theme.Text
-espToggle.Font = Enum.Font.GothamBold
-espToggle.TextSize = 22
-espToggle.Text = "Start Mutation ESP"
-Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 8)
+local function getMyFarm()
+    for _, f in ipairs(workspace.Farm:GetChildren()) do
+        local d = f:FindFirstChild("Important") and f.Important:FindFirstChild("Data")
+        if d and d:FindFirstChild("Owner") and d.Owner.Value == localPlayer.Name then
+            return f
+        end
+    end
+end
 
-local espRunning = false
-local espThread
+local function clr()
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BillboardGui") and v.Name == "MutationESP" then v:Destroy() end
+    end
+end
 
-local mutations = {
-    "Wet","Gold","Frozen","Rainbow","Choc","Chilled","Shocked","Moonlit","Bloodlit","Celestial",
-    "Disco","Zombified","Plasma","Honey Glazed","Pollinated"
-}
 local c = {
     Wet=Color3.fromRGB(100,200,255),Gold=Color3.fromRGB(255,215,0),Frozen=Color3.fromRGB(135,206,235),
     Rainbow=Color3.fromRGB(255,0,255),Choc=Color3.fromRGB(120,72,0),Chilled=Color3.fromRGB(170,230,255),
@@ -833,56 +832,61 @@ local c = {
     Plasma=Color3.fromRGB(60,255,255),["Honey Glazed"]=Color3.fromRGB(255, 200, 75),Pollinated=Color3.fromRGB(225, 255, 130)
 }
 
-local p = game.Players.LocalPlayer
+----------------------
+-- Mutation ESP Button
+----------------------
+local mutEspBtn = Instance.new("TextButton", MainTab)
+mutEspBtn.Size = UDim2.new(0.7, 0, 0, 38)
+mutEspBtn.Position = UDim2.new(0.15, 0, 0, 28)
+mutEspBtn.BackgroundColor3 = Theme.Button
+mutEspBtn.TextColor3 = Theme.Text
+mutEspBtn.Font = Enum.Font.GothamBold
+mutEspBtn.TextSize = 19
+mutEspBtn.Text = "Start Mutation ESP"
+Instance.new("UICorner", mutEspBtn).CornerRadius = UDim.new(0, 8)
 
-local function clr()
-    for _,v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BillboardGui") and v.Name=="MutationESP" then v:Destroy() end
-    end
-end
+local mutEspRunning = false
+local mutEspThread
 
-local function grd()
-    for _,f in ipairs(workspace.Farm:GetChildren()) do
-        local d=f:FindFirstChild("Important") and f.Important:FindFirstChild("Data")
-        if d and d:FindFirstChild("Owner") and d.Owner.Value==p.Name then return f end
-    end
-end
-
-espToggle.MouseButton1Click:Connect(function()
-    espRunning = not espRunning
-    if espRunning then
-        espToggle.Text = "Disable Mutation ESP"
-        espToggle.BackgroundColor3 = Theme.Accent2
-        espThread = coroutine.create(function()
-            while espRunning do
+mutEspBtn.MouseButton1Click:Connect(function()
+    mutEspRunning = not mutEspRunning
+    if mutEspRunning then
+        mutEspBtn.Text = "Disable Mutation ESP"
+        mutEspBtn.BackgroundColor3 = Theme.Accent2
+        mutEspThread = coroutine.create(function()
+            local mutations = {
+                "Wet","Gold","Frozen","Rainbow","Choc","Chilled","Shocked","Moonlit","Bloodlit","Celestial",
+                "Disco","Zombified","Plasma","Honey Glazed","Pollinated"
+            }
+            while mutEspRunning do
                 clr()
-                local g=grd()
+                local g = getMyFarm()
                 if g then
-                    local pl=g.Important:FindFirstChild("Plants_Physical")
+                    local pl = g.Important:FindFirstChild("Plants_Physical")
                     if pl then
-                        for _,pt in ipairs(pl:GetChildren()) do
-                            local fnd={}
-                            for _,mm in ipairs(mutations) do
-                                if pt:GetAttribute(mm) then table.insert(fnd,mm) end
+                        for _, pt in ipairs(pl:GetChildren()) do
+                            local fnd = {}
+                            for _, mm in ipairs(mutations) do
+                                if pt:GetAttribute(mm) then table.insert(fnd, mm) end
                             end
-                            if #fnd>0 then
-                                local bp=pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
+                            if #fnd > 0 then
+                                local bp = pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
                                 if bp then
-                                    local gui=Instance.new("BillboardGui")
-                                    gui.Name="MutationESP"
-                                    gui.Adornee=bp
-                                    gui.Size=UDim2.new(0,100,0,20)
-                                    gui.AlwaysOnTop=true
-                                    gui.StudsOffset=Vector3.new(0,6,0)
-                                    local lbl=Instance.new("TextLabel",gui)
-                                    lbl.Size=UDim2.new(1,0,1,0)
-                                    lbl.BackgroundTransparency=1
-                                    lbl.Text=table.concat(fnd," + ")
-                                    lbl.TextColor3=c[fnd[1]] or Color3.new(1,1,1)
-                                    lbl.TextScaled=false
-                                    lbl.TextSize=12
-                                    lbl.Font=Enum.Font.GothamBold
-                                    gui.Parent=bp
+                                    local gui = Instance.new("BillboardGui")
+                                    gui.Name = "MutationESP"
+                                    gui.Adornee = bp
+                                    gui.Size = UDim2.new(0, 100, 0, 20)
+                                    gui.AlwaysOnTop = true
+                                    gui.StudsOffset = Vector3.new(0, 6, 0)
+                                    local lbl = Instance.new("TextLabel", gui)
+                                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                                    lbl.BackgroundTransparency = 1
+                                    lbl.Text = table.concat(fnd, " + ")
+                                    lbl.TextColor3 = c[fnd[1]] or Color3.new(1,1,1)
+                                    lbl.TextScaled = false
+                                    lbl.TextSize = 12
+                                    lbl.Font = Enum.Font.GothamBold
+                                    gui.Parent = bp
                                 end
                             end
                         end
@@ -891,64 +895,65 @@ espToggle.MouseButton1Click:Connect(function()
                 wait(2)
             end
         end)
-        coroutine.resume(espThread)
+        coroutine.resume(mutEspThread)
     else
-        espToggle.Text = "Start Mutation ESP"
-        espToggle.BackgroundColor3 = Theme.Button
+        mutEspBtn.Text = "Start Mutation ESP"
+        mutEspBtn.BackgroundColor3 = Theme.Button
         clr()
     end
 end)
 
--- === HONEY EVENT ESP TAB ===
-local HoneyEspTab = CreateTab("Honey Event ESP")
-local honeyEspToggle = Instance.new("TextButton", HoneyEspTab)
-honeyEspToggle.Size = UDim2.new(0.7, 0, 0, 46)
-honeyEspToggle.Position = UDim2.new(0.15, 0, 0, 32)
-honeyEspToggle.BackgroundColor3 = Theme.Button
-honeyEspToggle.TextColor3 = Theme.Text
-honeyEspToggle.Font = Enum.Font.GothamBold
-honeyEspToggle.TextSize = 22
-honeyEspToggle.Text = "Start Honey ESP"
-Instance.new("UICorner", honeyEspToggle).CornerRadius = UDim.new(0, 8)
+-----------------------
+-- Honey ESP Button
+-----------------------
+local honeyEspBtn = Instance.new("TextButton", MainTab)
+honeyEspBtn.Size = UDim2.new(0.7, 0, 0, 38)
+honeyEspBtn.Position = UDim2.new(0.15, 0, 0, 74)
+honeyEspBtn.BackgroundColor3 = Theme.Button
+honeyEspBtn.TextColor3 = Theme.Text
+honeyEspBtn.Font = Enum.Font.GothamBold
+honeyEspBtn.TextSize = 19
+honeyEspBtn.Text = "Start Honey ESP"
+Instance.new("UICorner", honeyEspBtn).CornerRadius = UDim.new(0, 8)
 
 local honeyEspRunning = false
 local honeyEspThread
 
-honeyEspToggle.MouseButton1Click:Connect(function()
+honeyEspBtn.MouseButton1Click:Connect(function()
     honeyEspRunning = not honeyEspRunning
     if honeyEspRunning then
-        honeyEspToggle.Text = "Disable Honey ESP"
-        honeyEspToggle.BackgroundColor3 = Theme.Accent2
+        honeyEspBtn.Text = "Disable Honey ESP"
+        honeyEspBtn.BackgroundColor3 = Theme.Accent2
         honeyEspThread = coroutine.create(function()
             while honeyEspRunning do
                 clr()
-                local g=grd()
+                local g = getMyFarm()
                 if g then
-                    local pl=g.Important:FindFirstChild("Plants_Physical")
+                    local pl = g.Important:FindFirstChild("Plants_Physical")
                     if pl then
-                        for _,pt in ipairs(pl:GetChildren()) do
-                            local fnd={}
-                            for _,mm in ipairs({"Honey Glazed","Pollinated"}) do
-                                if pt:GetAttribute(mm) then table.insert(fnd,mm) end
+                        for _, pt in ipairs(pl:GetChildren()) do
+                            local fnd = {}
+                            for _, mm in ipairs({"Honey Glazed", "Pollinated"}) do
+                                if pt:GetAttribute(mm) then table.insert(fnd, mm) end
                             end
-                            if #fnd>0 then
-                                local bp=pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
+                            if #fnd > 0 then
+                                local bp = pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
                                 if bp then
-                                    local gui=Instance.new("BillboardGui")
-                                    gui.Name="MutationESP"
-                                    gui.Adornee=bp
-                                    gui.Size=UDim2.new(0,100,0,20)
-                                    gui.AlwaysOnTop=true
-                                    gui.StudsOffset=Vector3.new(0,6,0)
-                                    local lbl=Instance.new("TextLabel",gui)
-                                    lbl.Size=UDim2.new(1,0,1,0)
-                                    lbl.BackgroundTransparency=1
-                                    lbl.Text=table.concat(fnd," + ")
-                                    lbl.TextColor3=c[fnd[1]] or Color3.new(1,1,1)
-                                    lbl.TextScaled=false
-                                    lbl.TextSize=12
-                                    lbl.Font=Enum.Font.GothamBold
-                                    gui.Parent=bp
+                                    local gui = Instance.new("BillboardGui")
+                                    gui.Name = "MutationESP"
+                                    gui.Adornee = bp
+                                    gui.Size = UDim2.new(0, 100, 0, 20)
+                                    gui.AlwaysOnTop = true
+                                    gui.StudsOffset = Vector3.new(0, 6, 0)
+                                    local lbl = Instance.new("TextLabel", gui)
+                                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                                    lbl.BackgroundTransparency = 1
+                                    lbl.Text = table.concat(fnd, " + ")
+                                    lbl.TextColor3 = c[fnd[1]] or Color3.new(1,1,1)
+                                    lbl.TextScaled = false
+                                    lbl.TextSize = 12
+                                    lbl.Font = Enum.Font.GothamBold
+                                    gui.Parent = bp
                                 end
                             end
                         end
@@ -959,36 +964,30 @@ honeyEspToggle.MouseButton1Click:Connect(function()
         end)
         coroutine.resume(honeyEspThread)
     else
-        honeyEspToggle.Text = "Start Honey ESP"
-        honeyEspToggle.BackgroundColor3 = Theme.Button
+        honeyEspBtn.Text = "Start Honey ESP"
+        honeyEspBtn.BackgroundColor3 = Theme.Button
         clr()
     end
 end)
 
--- === HONEY COLLECT ONLY TAB ===
-local HoneyCollectTab = CreateTab("Honey Collect Only")
-
-local honeyCollectToggle = Instance.new("TextButton", HoneyCollectTab)
-honeyCollectToggle.Size = UDim2.new(0.7, 0, 0, 46)
-honeyCollectToggle.Position = UDim2.new(0.15, 0, 0, 32)
-honeyCollectToggle.BackgroundColor3 = Theme.Button
-honeyCollectToggle.TextColor3 = Theme.Text
-honeyCollectToggle.Font = Enum.Font.GothamBold
-honeyCollectToggle.TextSize = 22
-honeyCollectToggle.Text = "Start Honey Collect"
-Instance.new("UICorner", honeyCollectToggle).CornerRadius = UDim.new(0, 8)
+-----------------------
+-- Honey Collect ONLY Button
+-----------------------
+local honeyCollectBtn = Instance.new("TextButton", MainTab)
+honeyCollectBtn.Size = UDim2.new(0.7, 0, 0, 38)
+honeyCollectBtn.Position = UDim2.new(0.15, 0, 0, 120)
+honeyCollectBtn.BackgroundColor3 = Theme.Button
+honeyCollectBtn.TextColor3 = Theme.Text
+honeyCollectBtn.Font = Enum.Font.GothamBold
+honeyCollectBtn.TextSize = 19
+honeyCollectBtn.Text = "Start Honey Collect Only"
+Instance.new("UICorner", honeyCollectBtn).CornerRadius = UDim.new(0, 8)
 
 local honeyCollecting = false
 local honeyCollectThread
 
-local function getMyFarm()
-    for _, farm in pairs(workspace.Farm:GetChildren()) do
-        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
-        if data and data:FindFirstChild("Owner") and data.Owner.Value == localPlayer.Name then
-            return farm
-        end
-    end
-    return nil
+local function isInventoryFull()
+    return #localPlayer.Backpack:GetChildren() >= 200
 end
 
 local function getMyHoneyCrops()
@@ -1000,7 +999,6 @@ local function getMyHoneyCrops()
             for _, plant in pairs(plants:GetChildren()) do
                 for _, part in pairs(plant:GetDescendants()) do
                     if part:IsA("BasePart") and part:FindFirstChildOfClass("ProximityPrompt") then
-                        -- Check for "Honey Glazed" or "Pollinated" mutation
                         local parPlant = part.Parent
                         if parPlant and (parPlant:GetAttribute("Honey Glazed") or parPlant:GetAttribute("Pollinated")) then
                             table.insert(crops, part)
@@ -1014,15 +1012,11 @@ local function getMyHoneyCrops()
     return crops
 end
 
-local function isInventoryFull()
-    return #localPlayer.Backpack:GetChildren() >= 200
-end
-
 local function honeyCollectLoop()
     while honeyCollecting do
         -- ESP for honey crops only
         clr()
-        local g = grd()
+        local g = getMyFarm()
         if g then
             local pl = g.Important:FindFirstChild("Plants_Physical")
             if pl then
@@ -1056,11 +1050,11 @@ local function honeyCollectLoop()
         end
 
         if isInventoryFull() then
-            honeyCollectToggle.Text = "Backpack Full!"
+            honeyCollectBtn.Text = "Backpack Full!"
             repeat
                 task.wait(0.5)
             until not isInventoryFull() or not honeyCollecting
-            honeyCollectToggle.Text = "Stop Honey Collect"
+            honeyCollectBtn.Text = "Stop Honey Collect Only"
         end
         if not honeyCollecting then break end
 
@@ -1084,20 +1078,20 @@ local function honeyCollectLoop()
         end
         task.wait(0.2)
     end
-    honeyCollectToggle.Text = "Start Honey Collect"
-    honeyCollectToggle.BackgroundColor3 = Theme.Button
+    honeyCollectBtn.Text = "Start Honey Collect Only"
+    honeyCollectBtn.BackgroundColor3 = Theme.Button
     clr()
 end
 
-honeyCollectToggle.MouseButton1Click:Connect(function()
+honeyCollectBtn.MouseButton1Click:Connect(function()
     honeyCollecting = not honeyCollecting
     if honeyCollecting then
-        honeyCollectToggle.Text = "Stop Honey Collect"
-        honeyCollectToggle.BackgroundColor3 = Theme.Accent2
+        honeyCollectBtn.Text = "Stop Honey Collect Only"
+        honeyCollectBtn.BackgroundColor3 = Theme.Accent2
         honeyCollectThread = task.spawn(honeyCollectLoop)
     else
-        honeyCollectToggle.Text = "Start Honey Collect"
-        honeyCollectToggle.BackgroundColor3 = Theme.Button
+        honeyCollectBtn.Text = "Start Honey Collect Only"
+        honeyCollectBtn.BackgroundColor3 = Theme.Button
         if honeyCollectThread then
             task.cancel(honeyCollectThread)
             honeyCollectThread = nil
@@ -1105,6 +1099,7 @@ honeyCollectToggle.MouseButton1Click:Connect(function()
         clr()
     end
 end)
+
 
 
 local HttpService = game:GetService("HttpService")
