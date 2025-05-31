@@ -806,7 +806,7 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
 end)
 
 
--- === MAIN TAB (Honey Shop Autobuy as scrollable, compact buttons, always visible) ===
+-- === MAIN TAB (Honey Shop Autobuy as scrollable, compact buttons, always visible, with Shop UI button and moved Honey Collect Only) ===
 
 local MainTab = CreateTab("Main")
 
@@ -823,7 +823,6 @@ local honeyShopItems = {
     "Honey Walkway"
 }
 
--- State for autobuy checkboxes
 local autobuy_honey_selected = {}
 for _, item in ipairs(honeyShopItems) do
     autobuy_honey_selected[item] = false
@@ -889,13 +888,49 @@ end
 local buttonWidth = 0.36
 local buttonHeight = 28
 local buttonX = 0.62
-local firstButtonY = 28 + 92 + 8 -- 28 for label, 92 for scroll, 8 for spacing
+local scrollBottomY = 28 + 92 + 8 -- 28 for label, 92 for scroll, 8 for spacing
 local buttonSpacing = 12
 
--- Autobuy button (first, on left for vertical stack)
+-- Honey Collect Only button (just below scroll area)
+local honeyCollectBtn = Instance.new("TextButton", MainTab)
+honeyCollectBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+honeyCollectBtn.Position = UDim2.new(buttonX, 0, 0, scrollBottomY)
+honeyCollectBtn.BackgroundColor3 = Theme.Button
+honeyCollectBtn.TextColor3 = Theme.Text
+honeyCollectBtn.Font = Enum.Font.GothamBold
+honeyCollectBtn.TextSize = 15
+honeyCollectBtn.Text = "Start Honey Collect Only"
+Instance.new("UICorner", honeyCollectBtn).CornerRadius = UDim.new(0, 8)
+
+-- Open Shop UI button (directly under Honey Collect Only)
+local openShopBtn = Instance.new("TextButton", MainTab)
+openShopBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+openShopBtn.Position = UDim2.new(buttonX, 0, 0, scrollBottomY + buttonHeight + buttonSpacing)
+openShopBtn.BackgroundColor3 = Theme.Button
+openShopBtn.TextColor3 = Theme.Text
+openShopBtn.Font = Enum.Font.GothamBold
+openShopBtn.TextSize = 15
+openShopBtn.Text = "Open Shop UI"
+Instance.new("UICorner", openShopBtn).CornerRadius = UDim.new(0, 8)
+
+openShopBtn.MouseButton1Click:Connect(function()
+    local Players = game:GetService("Players")
+    local localPlayer = Players.LocalPlayer
+    local shop = localPlayer.PlayerGui:FindFirstChild("HoneyEventShop_UI")
+    if shop then
+        shop.Enabled = not shop.Enabled
+    else
+        warn("HoneyEventShop_UI not found in PlayerGui!")
+    end
+end)
+
+-- Next buttons (Autobuy, Mutation ESP, Honey ESP) stack below Open Shop UI
+local buttonStartY = scrollBottomY + (buttonHeight + buttonSpacing) * 2
+
+-- Start Autobuy
 local autobuy_honey_toggle = Instance.new("TextButton", MainTab)
 autobuy_honey_toggle.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-autobuy_honey_toggle.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 0)
+autobuy_honey_toggle.Position = UDim2.new(buttonX, 0, 0, buttonStartY + (buttonHeight + buttonSpacing) * 0)
 autobuy_honey_toggle.BackgroundColor3 = Theme.Button
 autobuy_honey_toggle.TextColor3 = Theme.Text
 autobuy_honey_toggle.Font = Enum.Font.GothamBold
@@ -930,7 +965,7 @@ end)
 ----------------------
 local mutEspBtn = Instance.new("TextButton", MainTab)
 mutEspBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-mutEspBtn.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 1)
+mutEspBtn.Position = UDim2.new(buttonX, 0, 0, buttonStartY + (buttonHeight + buttonSpacing) * 1)
 mutEspBtn.BackgroundColor3 = Theme.Button
 mutEspBtn.TextColor3 = Theme.Text
 mutEspBtn.Font = Enum.Font.GothamBold
@@ -940,6 +975,20 @@ Instance.new("UICorner", mutEspBtn).CornerRadius = UDim.new(0, 8)
 
 local mutEspRunning = false
 local mutEspThread
+
+local function clr()
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BillboardGui") and v.Name == "MutationESP" then v:Destroy() end
+    end
+end
+
+local c = {
+    Wet=Color3.fromRGB(100,200,255),Gold=Color3.fromRGB(255,215,0),Frozen=Color3.fromRGB(135,206,235),
+    Rainbow=Color3.fromRGB(255,0,255),Choc=Color3.fromRGB(120,72,0),Chilled=Color3.fromRGB(170,230,255),
+    Shocked=Color3.fromRGB(255,255,100),Moonlit=Color3.fromRGB(150,100,255),Bloodlit=Color3.fromRGB(200,10,60),
+    Celestial=Color3.fromRGB(200,255,255),Disco=Color3.fromRGB(255,120,255),Zombified=Color3.fromRGB(80,255,100),
+    Plasma=Color3.fromRGB(60,255,255),["Honey Glazed"]=Color3.fromRGB(255, 200, 75),Pollinated=Color3.fromRGB(225, 255, 130)
+}
 
 mutEspBtn.MouseButton1Click:Connect(function()
     mutEspRunning = not mutEspRunning
@@ -1001,7 +1050,7 @@ end)
 -----------------------
 local honeyEspBtn = Instance.new("TextButton", MainTab)
 honeyEspBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-honeyEspBtn.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 2)
+honeyEspBtn.Position = UDim2.new(buttonX, 0, 0, buttonStartY + (buttonHeight + buttonSpacing) * 2)
 honeyEspBtn.BackgroundColor3 = Theme.Button
 honeyEspBtn.TextColor3 = Theme.Text
 honeyEspBtn.Font = Enum.Font.GothamBold
@@ -1063,19 +1112,7 @@ honeyEspBtn.MouseButton1Click:Connect(function()
     end
 end)
 
------------------------
--- Honey Collect ONLY Button
------------------------
-local honeyCollectBtn = Instance.new("TextButton", MainTab)
-honeyCollectBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-honeyCollectBtn.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 3)
-honeyCollectBtn.BackgroundColor3 = Theme.Button
-honeyCollectBtn.TextColor3 = Theme.Text
-honeyCollectBtn.Font = Enum.Font.GothamBold
-honeyCollectBtn.TextSize = 15
-honeyCollectBtn.Text = "Start Honey Collect Only"
-Instance.new("UICorner", honeyCollectBtn).CornerRadius = UDim.new(0, 8)
-
+-- Honey Collect Only logic
 local honeyCollecting = false
 local honeyCollectThread
 
@@ -1107,7 +1144,6 @@ end
 
 local function honeyCollectLoop()
     while honeyCollecting do
-        -- ESP for honey crops only
         clr()
         local g = getMyFarm()
         if g then
@@ -1192,7 +1228,6 @@ honeyCollectBtn.MouseButton1Click:Connect(function()
         clr()
     end
 end)
-
 
 
 
