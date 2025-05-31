@@ -888,11 +888,12 @@ espToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === SERVER TAB ===
-local ServerTab = CreateTab("Server")
+
+-- === SETTINGS TAB (renamed from SERVER) ===
+local SettingsTab = CreateTab("Settings") -- Changed tab name
 
 -- "Join Low Server" button
-local joinLowBtn = Instance.new("TextButton", ServerTab)
+local joinLowBtn = Instance.new("TextButton", SettingsTab)
 joinLowBtn.Size = UDim2.new(0, 180, 0, 38)
 joinLowBtn.Position = UDim2.new(0, 20, 0, 20)
 joinLowBtn.BackgroundColor3 = Theme.Button
@@ -902,82 +903,11 @@ joinLowBtn.TextSize = 18
 joinLowBtn.Text = "Join Low Server"
 Instance.new("UICorner", joinLowBtn).CornerRadius = UDim.new(0, 7)
 
--- "Auto Hop" toggle
-local autoHopToggle = Instance.new("TextButton", ServerTab)
-autoHopToggle.Size = UDim2.new(0, 180, 0, 38)
-autoHopToggle.Position = UDim2.new(0, 20, 0, 68)
-autoHopToggle.BackgroundColor3 = Theme.Button
-autoHopToggle.TextColor3 = Theme.Text
-autoHopToggle.Font = Enum.Font.GothamBold
-autoHopToggle.TextSize = 18
-autoHopToggle.Text = "Auto Hop: OFF"
-Instance.new("UICorner", autoHopToggle).CornerRadius = UDim.new(0, 7)
-
-local autoHopEnabled = false
-
--- Player threshold slider
-local thresholdLabel = Instance.new("TextLabel", ServerTab)
-thresholdLabel.Text = "Hop if players > 28"
-thresholdLabel.Size = UDim2.new(0, 170, 0, 22)
-thresholdLabel.Position = UDim2.new(0, 25, 0, 118)
-thresholdLabel.BackgroundTransparency = 1
-thresholdLabel.TextColor3 = Theme.Text
-thresholdLabel.Font = Enum.Font.Gotham
-thresholdLabel.TextSize = 14
-thresholdLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local playerThreshold = 28
-local sliderFrame = Instance.new("Frame", ServerTab)
-sliderFrame.BackgroundColor3 = Theme.Button
-sliderFrame.Size = UDim2.new(0, 130, 0, 10)
-sliderFrame.Position = UDim2.new(0, 25, 0, 145)
-Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 5)
-
-local sliderBar = Instance.new("Frame", sliderFrame)
-sliderBar.BackgroundColor3 = Theme.Accent
-sliderBar.Size = UDim2.new(0, 16, 1, 0)
-sliderBar.Position = UDim2.new((playerThreshold-10)/30, 0, 0, 0)
-Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 5)
-
--- Slider logic
-local draggingSlider = false
-local function setSliderFromX(x)
-    local left = sliderFrame.AbsolutePosition.X
-    local width = sliderFrame.AbsoluteSize.X
-    local rel = math.clamp((x - left) / width, 0, 1)
-    playerThreshold = math.floor(10 + rel * 30 + 0.5)
-    sliderBar.Position = UDim2.new(rel, -8, 0, 0)
-    thresholdLabel.Text = "Hop if players > "..tostring(playerThreshold)
-end
-sliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = true
-        setSliderFromX(input.Position.X)
-    end
-end)
-sliderFrame.InputEnded:Connect(function()
-    draggingSlider = false
-end)
-sliderBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        draggingSlider = true
-        setSliderFromX(input.Position.X)
-    end
-end)
-sliderBar.InputEnded:Connect(function()
-    draggingSlider = false
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
-        setSliderFromX(input.Position.X)
-    end
-end)
-sliderBar.Position = UDim2.new((playerThreshold-10)/30, -8, 0, 0)
-
--- Server hop logic
+-- Server hop logic (low server join)
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local PlaceId = game.PlaceId
+local Players = game:GetService("Players")
 local function getLowestServer()
     local servers = {}
     local cursor = nil
@@ -1013,27 +943,38 @@ joinLowBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local autoHopThread
-autoHopToggle.MouseButton1Click:Connect(function()
-    autoHopEnabled = not autoHopEnabled
-    autoHopToggle.Text = autoHopEnabled and "Auto Hop: ON" or "Auto Hop: OFF"
-    autoHopToggle.BackgroundColor3 = autoHopEnabled and Theme.Accent2 or Theme.Button
-    if autoHopThread then
-        task.cancel(autoHopThread)
-        autoHopThread = nil
+-- === REMOVE OTHER FARMS BUTTON ===
+local removeFarmsBtn = Instance.new("TextButton", SettingsTab)
+removeFarmsBtn.Size = UDim2.new(0, 180, 0, 38)
+removeFarmsBtn.Position = UDim2.new(0, 20, 0, 70)
+removeFarmsBtn.BackgroundColor3 = Theme.Button
+removeFarmsBtn.TextColor3 = Theme.Text
+removeFarmsBtn.Font = Enum.Font.GothamBold
+removeFarmsBtn.TextSize = 18
+removeFarmsBtn.Text = "Remove Other Farms"
+Instance.new("UICorner", removeFarmsBtn).CornerRadius = UDim.new(0, 7)
+
+local removeFarmsInfo = Instance.new("TextLabel", SettingsTab)
+removeFarmsInfo.Size = UDim2.new(0, 250, 0, 22)
+removeFarmsInfo.Position = UDim2.new(0, 20, 0, 112)
+removeFarmsInfo.BackgroundTransparency = 1
+removeFarmsInfo.TextColor3 = Theme.Accent
+removeFarmsInfo.Font = Enum.Font.Gotham
+removeFarmsInfo.TextSize = 14
+removeFarmsInfo.TextXAlignment = Enum.TextXAlignment.Left
+removeFarmsInfo.Text = "Remove other farms to fix lag"
+
+removeFarmsBtn.MouseButton1Click:Connect(function()
+    local localPlayer = game.Players.LocalPlayer
+    for _, farm in pairs(workspace.Farm:GetChildren()) do
+        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
+        if data and data:FindFirstChild("Owner") and data.Owner.Value ~= localPlayer.Name then
+            farm:Destroy()
+        end
     end
-    if autoHopEnabled then
-        autoHopThread = task.spawn(function()
-            while autoHopEnabled do
-                if #Players:GetPlayers() > playerThreshold then
-                    local target = getLowestServer()
-                    if target then serverHop(target) end
-                    break
-                end
-                task.wait(6)
-            end
-        end)
-    end
+    removeFarmsBtn.Text = "Farms Removed!"
+    wait(1.8)
+    removeFarmsBtn.Text = "Remove Other Farms"
 end)
 
 local HttpService = game:GetService("HttpService")
