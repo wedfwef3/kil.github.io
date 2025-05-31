@@ -1022,7 +1022,7 @@ notifLabel.TextSize = 16
 notifLabel.Text = ""
 notifLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- === SLIDER (FULLY DRAGGABLE, PC+MOBILE) ===
+-- === SLIDER (PC+MOBILE DRAGGABLE) ===
 local sliderFrame = Instance.new("Frame", WebhookTab)
 sliderFrame.Size = UDim2.new(1, -40, 0, 26)
 sliderFrame.Position = UDim2.new(0, 20, 0, 130)
@@ -1054,7 +1054,7 @@ sliderLabel.Text = "Send notification every 3 minutes"
 
 local minValue, maxValue = 1, 60
 local sliderDragging = false
-local sliderValue = 1
+local sliderValue = 3
 
 local dragInputConn
 local function setSliderKnobFromValue(val)
@@ -1120,7 +1120,7 @@ end)
 setSliderKnobFromValue(sliderValue)
 sliderLabel.Text = ("Send notification every %d minute%s"):format(sliderValue, sliderValue == 1 and "" or "s")
 
--- === WEBHOOK LOGIC (GAINS ONLY) ===
+-- === WEBHOOK LOGIC (CUMULATIVE GAINS ONLY, EXCLUDING STARTING ITEMS/SEEDS) ===
 local leaderstats = localPlayer:WaitForChild("leaderstats")
 local shecklesStat = leaderstats:WaitForChild("Sheckles")
 
@@ -1129,6 +1129,7 @@ local webhookUrl = ""
 local trackerThread = nil
 local sessionStart = tick()
 local startingInventory = {}
+local cumulativeGained = {}
 
 -- Group by base name (ignore [brackets])
 local function getBaseName(name)
@@ -1139,6 +1140,7 @@ local function getBaseName(name)
     return name
 end
 
+-- Track both items and seeds in backpack
 local function getCurrentInventory()
     local counts = {}
     for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
@@ -1149,18 +1151,26 @@ local function getCurrentInventory()
     return counts
 end
 
-local function formatTotalsGained()
-    local lines = {}
+local function updateCumulativeGained()
     local current = getCurrentInventory()
     for item, count in pairs(current) do
         local startCount = startingInventory[item] or 0
-        local gained = count - startCount
+        local gainedNow = count - startCount
+        if gainedNow > 0 then
+            cumulativeGained[item] = math.max(cumulativeGained[item] or 0, gainedNow)
+        end
+    end
+end
+
+local function formatTotalsGained()
+    local lines = {}
+    for item, gained in pairs(cumulativeGained) do
         if gained > 0 then
             table.insert(lines, ("%s: %d"):format(item, gained))
         end
     end
     table.sort(lines)
-    return #lines > 0 and table.concat(lines, "\n") or "No new items gained."
+    return #lines > 0 and table.concat(lines, "\n") or "No new items/seeds gained."
 end
 
 local function fmt(n)
@@ -1174,11 +1184,11 @@ end
 local function sendWebhook(username, currentMoney, uptime)
     if webhookUrl == "" then return end
     local embed = {
-        title = ("%s's Garden Gained Items"):format(username),
+        title = ("%s's Garden Gained Items/Seeds"):format(username),
         color = 0x48db6a,
         fields = {
             { name = "Total Money", value = fmt(currentMoney), inline = false },
-            { name = "Items Gained", value = ("```%s```"):format(formatTotalsGained()), inline = false },
+            { name = "Items/Seeds Gained", value = ("```%s```"):format(formatTotalsGained()), inline = false },
             { name = "Session Uptime", value = uptime, inline = false }
         }
     }
@@ -1206,11 +1216,13 @@ local function startWebhook()
         task.cancel(trackerThread)
     end
     startingInventory = getCurrentInventory() -- snapshot at start
+    cumulativeGained = {} -- reset
     trackerThread = task.spawn(function()
         while webhookActive do
             for i = 1, sliderValue * 60 do
                 if not webhookActive then return end
                 task.wait(1)
+                updateCumulativeGained() -- update gains as you go
             end
             local nowMoney = shecklesStat.Value
             local uptime = os.date("!%X", math.floor(tick() - sessionStart))
@@ -1239,6 +1251,8 @@ checkBtn.MouseButton1Click:Connect(function()
     stopWebhook()
     startWebhook()
 end)
+
+
 
 -- === DRAGGABLE MAIN FRAME ===
 local dragging = false
