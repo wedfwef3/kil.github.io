@@ -1558,6 +1558,40 @@ resetBtn.MouseButton1Click:Connect(function()
     notifLabel.Text = "Config reset."
 end)
 
+
+-- Reduce Lag Button (place below Reset Config)
+local reduceLagBtn = Instance.new("TextButton", SettingsTab)
+reduceLagBtn.Size = UDim2.new(0, 120, 0, 36)
+reduceLagBtn.Position = UDim2.new(0, 300, 0, 110)
+reduceLagBtn.BackgroundColor3 = Theme.Accent
+reduceLagBtn.TextColor3 = Theme.Text
+reduceLagBtn.Font = Enum.Font.GothamBold
+reduceLagBtn.TextSize = 18
+reduceLagBtn.Text = "Reduce Lag"
+Instance.new("UICorner", reduceLagBtn).CornerRadius = UDim.new(0, 12)
+reduceLagBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        local l=game:GetService("Lighting")
+        l.GlobalShadows=false l.FogEnd=1e10 l.Brightness=0 l.EnvironmentDiffuseScale=0 l.EnvironmentSpecularScale=0 l.OutdoorAmbient=Color3.new(0,0,0)
+        local t=workspace:FindFirstChildOfClass("Terrain")
+        if t then t.WaterWaveSize=0 t.WaterWaveSpeed=0 t.WaterReflectance=0 t.WaterTransparency=1 end
+        for _,v in pairs(game:GetDescendants()) do
+            if v:IsA("Decal")or v:IsA("Texture")or v:IsA("ShirtGraphic")or v:IsA("Accessory")or v:IsA("Clothing")then v:Destroy()
+            elseif v:IsA("ParticleEmitter")or v:IsA("Trail")then v.Enabled=false
+            elseif v:IsA("Explosion")then v.Visible=false
+            elseif v:IsA("MeshPart")or v:IsA("Part")or v:IsA("UnionOperation")then v.Material=Enum.Material.SmoothPlastic v.Reflectance=0 v.CastShadow=false end
+        end
+        workspace.StreamingEnabled=true workspace.StreamingMinRadius=32 workspace.StreamingTargetRadius=64
+        settings().Rendering.QualityLevel=Enum.QualityLevel.Level01 settings().Rendering.EditQualityLevel=Enum.QualityLevel.Level01
+        for _,o in pairs(workspace:GetDescendants())do
+            if o:IsA("BasePart")then pcall(function()o.TextureID=""end) o.CastShadow=false end
+            if o:IsA("ParticleEmitter")or o:IsA("Beam")or o:IsA("Trail")then o.Enabled=false end
+            if o:IsA("BasePart")and(o.Name=="Wall"or o.Name=="ColorWall")then o:Destroy()end
+        end
+    end)
+    notifLabel.Text = "Lag reduced!"
+end)
+
 -- Auto-load config on script start
 task.spawn(function()
     local config = loadConfig()
