@@ -977,9 +977,12 @@ removeFarmsBtn.MouseButton1Click:Connect(function()
     removeFarmsBtn.Text = "Remove Other Farms"
 end)
 
+
 local HttpService = game:GetService("HttpService")
 local webhookReq = (syn and syn.request) or (http and http.request) or http_request or request or httprequest
+local localPlayer = game:GetService("Players").LocalPlayer
 
+-- === WEBHOOK TAB UI ===
 local WebhookTab = CreateTab("Webhook")
 
 local webhookFrame = Instance.new("Frame", WebhookTab)
@@ -1019,24 +1022,25 @@ notifLabel.TextSize = 16
 notifLabel.Text = ""
 notifLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+-- === SLIDER (FULLY DRAGGABLE) ===
 local sliderFrame = Instance.new("Frame", WebhookTab)
 sliderFrame.Size = UDim2.new(1, -40, 0, 26)
 sliderFrame.Position = UDim2.new(0, 20, 0, 130)
 sliderFrame.BackgroundColor3 = Theme.Button
-sliderFrame.BackgroundTransparency = 0
 Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 10)
 
 local sliderBar = Instance.new("Frame", sliderFrame)
-sliderBar.Size = UDim2.new(0, 170, 0, 8)
-sliderBar.Position = UDim2.new(0, 10, 0.5, -4)
+sliderBar.Size = UDim2.new(1, -44, 0, 8)
+sliderBar.Position = UDim2.new(0, 22, 0.5, -4)
 sliderBar.BackgroundColor3 = Theme.Accent
 Instance.new("UICorner", sliderBar).CornerRadius = UDim.new(0, 4)
 
 local sliderKnob = Instance.new("Frame", sliderFrame)
 sliderKnob.Size = UDim2.new(0, 22, 0, 22)
-sliderKnob.Position = UDim2.new(0, 10, 0.5, -11)
+sliderKnob.Position = UDim2.new(0, 22, 0.5, -11)
 sliderKnob.BackgroundColor3 = Theme.Accent2
 Instance.new("UICorner", sliderKnob).CornerRadius = UDim.new(1, 0)
+sliderKnob.ZIndex = 2
 
 local sliderLabel = Instance.new("TextLabel", WebhookTab)
 sliderLabel.Size = UDim2.new(1, -40, 0, 24)
@@ -1052,13 +1056,19 @@ local minValue, maxValue = 1, 60
 local sliderDragging = false
 local sliderValue = 3
 
+local function setSliderKnobFromValue(val)
+    local barWidth = sliderBar.AbsoluteSize.X
+    local rel = (val - minValue) / (maxValue - minValue)
+    local knobX = rel * barWidth
+    sliderKnob.Position = UDim2.new(0, 22 + knobX - sliderKnob.Size.X.Offset / 2, 0.5, -11)
+end
+
 local function updateSliderFromX(x)
     local left = sliderBar.AbsolutePosition.X
     local width = sliderBar.AbsoluteSize.X
     local rel = math.clamp((x - left) / width, 0, 1)
     sliderValue = math.clamp(math.floor(minValue + rel * (maxValue - minValue) + 0.5), minValue, maxValue)
-    local knobX = rel * width
-    sliderKnob.Position = UDim2.new(0, 10 + knobX - sliderKnob.Size.X.Offset/2, 0.5, -11)
+    setSliderKnobFromValue(sliderValue)
     sliderLabel.Text = ("Send notification every %d minute%s"):format(sliderValue, sliderValue == 1 and "" or "s")
 end
 
@@ -1068,6 +1078,17 @@ sliderKnob.InputBegan:Connect(function(input)
     end
 end)
 sliderKnob.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        sliderDragging = false
+    end
+end)
+sliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        sliderDragging = true
+        updateSliderFromX(input.Position.X)
+    end
+end)
+sliderBar.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         sliderDragging = false
     end
@@ -1089,6 +1110,10 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+setSliderKnobFromValue(sliderValue)
+sliderLabel.Text = ("Send notification every %d minute%s"):format(sliderValue, sliderValue == 1 and "" or "s")
+
+-- === WEBHOOK LOGIC ===
 local leaderstats = localPlayer:WaitForChild("leaderstats")
 local shecklesStat = leaderstats:WaitForChild("Sheckles")
 
@@ -1100,11 +1125,21 @@ local webhookUrl = ""
 local trackerThread = nil
 local sessionStart = tick()
 
+-- Group by base name (ignore [brackets])
+local function getBaseName(name)
+    local base = name:match("^(.-) %b[]")
+    if base then return base end
+    base = name:match("^(.-)%[")
+    if base then return base:sub(1, -2) end
+    return name
+end
+
 local function getCurrentInventory()
     local counts = {}
     for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
-        local name = item:GetAttribute("Seed") or item.Name
-        counts[name] = (counts[name] or 0) + 1
+        local rawName = item:GetAttribute("Seed") or item.Name
+        local baseName = getBaseName(rawName)
+        counts[baseName] = (counts[baseName] or 0) + 1
     end
     return counts
 end
