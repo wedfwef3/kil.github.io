@@ -1132,6 +1132,74 @@ honeyEspBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Place this code after your Start Honey ESP button setup in the MainTab section
+
+-- Auto Submit Fruits Button (underneath Start Honey ESP)
+local autoSubmitBtn = Instance.new("TextButton", MainTab)
+autoSubmitBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+autoSubmitBtn.Position = UDim2.new(rightButtonX, 0, 0, rightButtonStartY + (buttonHeight + rightButtonSpacing) * 3)
+autoSubmitBtn.BackgroundColor3 = Theme.Button
+autoSubmitBtn.TextColor3 = Theme.Text
+autoSubmitBtn.Font = Enum.Font.GothamBold
+autoSubmitBtn.TextSize = 15
+autoSubmitBtn.Text = "Auto Submit Fruits"
+Instance.new("UICorner", autoSubmitBtn).CornerRadius = UDim.new(0, 8)
+
+local autoSubmitRunning = false
+local autoSubmitThread
+
+autoSubmitBtn.MouseButton1Click:Connect(function()
+    autoSubmitRunning = not autoSubmitRunning
+    if autoSubmitRunning then
+        autoSubmitBtn.Text = "Disable Auto Submit"
+        autoSubmitBtn.BackgroundColor3 = Theme.Accent2
+        autoSubmitThread = task.spawn(function()
+            local Players = game:GetService("Players")
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local localPlayer = Players.LocalPlayer
+
+            local function getPollinatedFruitTool()
+                for _, item in ipairs(localPlayer.Backpack:GetChildren()) do
+                    if item:GetAttribute("Pollinated") then
+                        return item
+                    end
+                end
+                return nil
+            end
+
+            local function equipTool(tool)
+                local char = localPlayer.Character
+                if tool and char then
+                    local humanoid = char:FindFirstChildOfClass("Humanoid")
+                    if humanoid and tool.Parent ~= char then
+                        humanoid:EquipTool(tool)
+                        task.wait(0.15)
+                    end
+                end
+            end
+
+            while autoSubmitRunning do
+                local tool = getPollinatedFruitTool()
+                if tool then
+                    equipTool(tool)
+                    local args = { "MachineInteract" }
+                    ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("HoneyMachineService_RE"):FireServer(unpack(args))
+                    task.wait(0.2)
+                else
+                    task.wait(1)
+                end
+            end
+        end)
+    else
+        autoSubmitBtn.Text = "Auto Submit Fruits"
+        autoSubmitBtn.BackgroundColor3 = Theme.Button
+        if autoSubmitThread then
+            task.cancel(autoSubmitThread)
+            autoSubmitThread = nil
+        end
+    end
+end)
+
 -- Honey Collect Only logic
 local honeyCollecting = false
 local honeyCollectThread
