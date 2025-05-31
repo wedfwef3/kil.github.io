@@ -1200,6 +1200,81 @@ autoSubmitBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Place this code right after your Auto Submit Fruits button code in the MainTab setup
+
+local collectJarBtn = Instance.new("TextButton", MainTab)
+collectJarBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+collectJarBtn.Position = UDim2.new(rightButtonX, 0, 0, rightButtonStartY + (buttonHeight + rightButtonSpacing) * 4)
+collectJarBtn.BackgroundColor3 = Theme.Button
+collectJarBtn.TextColor3 = Theme.Text
+collectJarBtn.Font = Enum.Font.GothamBold
+collectJarBtn.TextSize = 15
+collectJarBtn.Text = "Collect Jar"
+Instance.new("UICorner", collectJarBtn).CornerRadius = UDim.new(0, 8)
+
+local collectJarRunning = false
+local collectJarThread
+
+collectJarBtn.MouseButton1Click:Connect(function()
+    collectJarRunning = not collectJarRunning
+    if collectJarRunning then
+        collectJarBtn.Text = "Stop Collect Jar"
+        collectJarBtn.BackgroundColor3 = Theme.Accent2
+        collectJarThread = task.spawn(function()
+            while collectJarRunning do
+                -- Teleport to the coordinates, fire the nearest prompt 3 times (with small delay between)
+                local Players = game:GetService("Players")
+                local localPlayer = Players.LocalPlayer
+                local POSITION = Vector3.new(-111.56, 4, -7.60)
+
+                local char = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.CFrame = CFrame.new(POSITION)
+                    task.wait(0.3)
+                    -- Find nearest enabled ProximityPrompt
+                    local nearestPrompt, nearestDist = nil, math.huge
+                    for _, part in ipairs(workspace:GetDescendants()) do
+                        if part:IsA("ProximityPrompt") and part.Enabled then
+                            local parent = part.Parent
+                            if parent and parent:IsA("BasePart") then
+                                local dist = (parent.Position - POSITION).Magnitude
+                                if dist < nearestDist then
+                                    nearestPrompt = part
+                                    nearestDist = dist
+                                end
+                            end
+                        end
+                    end
+                    if nearestPrompt then
+                        for i = 1, 3 do
+                            fireproximityprompt(nearestPrompt)
+                            task.wait(0.2)
+                        end
+                        print("Fired prompt '" .. nearestPrompt.Name .. "' 3 times.")
+                    else
+                        warn("No enabled ProximityPrompt found near the teleport location.")
+                    end
+                end
+                -- Wait 60 seconds before next attempt
+                for i = 1, 60 do
+                    if not collectJarRunning then break end
+                    task.wait(1)
+                end
+            end
+        end)
+    else
+        collectJarBtn.Text = "Collect Jar"
+        collectJarBtn.BackgroundColor3 = Theme.Button
+        if collectJarThread then
+            task.cancel(collectJarThread)
+            collectJarThread = nil
+        end
+    end
+end)
+
+
+
 -- Honey Collect Only logic
 local honeyCollecting = false
 local honeyCollectThread
