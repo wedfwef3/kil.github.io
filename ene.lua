@@ -428,36 +428,74 @@ autoplant_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOSELL TAB ===
-local AutosellTab = CreateTab("Autosell")
+
+-- === AUTOFARM TAB (Autosell + Autocollect Combined) ===
+local AutofarmTab = CreateTab("Autofarm")
 local autosell_running = false
 local autosell_thread
-
-local autosell_toggle = Instance.new("TextButton", AutosellTab)
-autosell_toggle.Size = UDim2.new(0.6, 0, 0, 38)
-autosell_toggle.Position = UDim2.new(0, 16, 0, 64)
-autosell_toggle.BackgroundColor3 = Theme.Button
-autosell_toggle.TextColor3 = Theme.Text
-autosell_toggle.Font = Enum.Font.GothamBold
-autosell_toggle.TextSize = 18
-autosell_toggle.Text = "Start Autosell"
-Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
+local collecting = false
+local collect_thread
+local autosell_when_full = false
 
 local autosell_threshold = 200
-local sliderLabel = Instance.new("TextLabel", AutosellTab)
+
+local autofarmLabel = Instance.new("TextLabel", AutofarmTab)
+autofarmLabel.Text = "Autofarm Features"
+autofarmLabel.Size = UDim2.new(1, -20, 0, 24)
+autofarmLabel.Position = UDim2.new(0, 16, 0, 8)
+autofarmLabel.BackgroundTransparency = 1
+autofarmLabel.TextColor3 = Theme.Accent2
+autofarmLabel.Font = Enum.Font.GothamBold
+autofarmLabel.TextSize = 17
+autofarmLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- === AUTOCOLLECT SECTION ===
+local autocollect_toggle = Instance.new("TextButton", AutofarmTab)
+autocollect_toggle.Size = UDim2.new(0.6, 0, 0, 38)
+autocollect_toggle.Position = UDim2.new(0, 16, 0, 38)
+autocollect_toggle.BackgroundColor3 = Theme.Button
+autocollect_toggle.TextColor3 = Theme.Text
+autocollect_toggle.Font = Enum.Font.GothamBold
+autocollect_toggle.TextSize = 18
+autocollect_toggle.Text = "Start Autocollect"
+Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
+
+local autosell_collect_toggle = Instance.new("TextButton", AutofarmTab)
+autosell_collect_toggle.Size = UDim2.new(0.6, 0, 0, 32)
+autosell_collect_toggle.Position = UDim2.new(0, 16, 0, 84)
+autosell_collect_toggle.BackgroundColor3 = Theme.Button
+autosell_collect_toggle.TextColor3 = Theme.Text
+autosell_collect_toggle.Font = Enum.Font.Gotham
+autosell_collect_toggle.TextSize = 16
+autosell_collect_toggle.Text = "Autosell When Full: OFF"
+Instance.new("UICorner", autosell_collect_toggle).CornerRadius = UDim.new(0, 7)
+
+autosell_collect_toggle.MouseButton1Click:Connect(function()
+    autosell_when_full = not autosell_when_full
+    if autosell_when_full then
+        autosell_collect_toggle.Text = "Autosell When Full: ON"
+        autosell_collect_toggle.BackgroundColor3 = Theme.Accent
+    else
+        autosell_collect_toggle.Text = "Autosell When Full: OFF"
+        autosell_collect_toggle.BackgroundColor3 = Theme.Button
+    end
+end)
+
+-- === AUTOSELL SECTION (with Slider & Dragger) ===
+local sliderLabel = Instance.new("TextLabel", AutofarmTab)
 sliderLabel.Text = "Sell when backpack has at least: "..tostring(autosell_threshold)
 sliderLabel.Size = UDim2.new(1, -20, 0, 24)
-sliderLabel.Position = UDim2.new(0, 16, 0, 24)
+sliderLabel.Position = UDim2.new(0, 16, 0, 128)
 sliderLabel.BackgroundTransparency = 1
 sliderLabel.TextColor3 = Theme.Text
 sliderLabel.Font = Enum.Font.GothamBold
 sliderLabel.TextSize = 15
 sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local sliderFrame = Instance.new("Frame", AutosellTab)
+local sliderFrame = Instance.new("Frame", AutofarmTab)
 sliderFrame.BackgroundColor3 = Theme.Button
 sliderFrame.Size = UDim2.new(0.9, 0, 0, 14)
-sliderFrame.Position = UDim2.new(0, 16, 0, 48)
+sliderFrame.Position = UDim2.new(0, 16, 0, 152)
 Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 5)
 
 local sliderBar = Instance.new("Frame", sliderFrame)
@@ -516,6 +554,17 @@ end)
 
 sliderBar.Position = UDim2.new(1, -6, 0.5, 0)
 
+local autosell_toggle = Instance.new("TextButton", AutofarmTab)
+autosell_toggle.Size = UDim2.new(0.6, 0, 0, 38)
+autosell_toggle.Position = UDim2.new(0, 16, 0, 176)
+autosell_toggle.BackgroundColor3 = Theme.Button
+autosell_toggle.TextColor3 = Theme.Text
+autosell_toggle.Font = Enum.Font.GothamBold
+autosell_toggle.TextSize = 18
+autosell_toggle.Text = "Start Autosell"
+Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
+
+-- === LOGIC ===
 local function getHRP()
     local char = localPlayer.Character
     return char and char:FindFirstChild("HumanoidRootPart")
@@ -551,45 +600,7 @@ autosell_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === AUTOCOLLECT TAB (TP + AUTOCOLLECT + OPTIONAL AUTOSELL) ===
-local AutocollectTab = CreateTab("Autocollect")
-
-local autocollect_toggle = Instance.new("TextButton", AutocollectTab)
-autocollect_toggle.Size = UDim2.new(0.6, 0, 0, 38)
-autocollect_toggle.Position = UDim2.new(0, 16, 0, 30)
-autocollect_toggle.BackgroundColor3 = Theme.Button
-autocollect_toggle.TextColor3 = Theme.Text
-autocollect_toggle.Font = Enum.Font.GothamBold
-autocollect_toggle.TextSize = 18
-autocollect_toggle.Text = "Start Autocollect"
-Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
-
--- Autosell toggle just below
-local autosell_collect_toggle = Instance.new("TextButton", AutocollectTab)
-autosell_collect_toggle.Size = UDim2.new(0.6, 0, 0, 32)
-autosell_collect_toggle.Position = UDim2.new(0, 16, 0, 76)
-autosell_collect_toggle.BackgroundColor3 = Theme.Button
-autosell_collect_toggle.TextColor3 = Theme.Text
-autosell_collect_toggle.Font = Enum.Font.Gotham
-autosell_collect_toggle.TextSize = 16
-autosell_collect_toggle.Text = "Autosell When Full: OFF"
-Instance.new("UICorner", autosell_collect_toggle).CornerRadius = UDim.new(0, 7)
-local autosell_when_full = false
-
-autosell_collect_toggle.MouseButton1Click:Connect(function()
-    autosell_when_full = not autosell_when_full
-    if autosell_when_full then
-        autosell_collect_toggle.Text = "Autosell When Full: ON"
-        autosell_collect_toggle.BackgroundColor3 = Theme.Accent
-    else
-        autosell_collect_toggle.Text = "Autosell When Full: OFF"
-        autosell_collect_toggle.BackgroundColor3 = Theme.Button
-    end
-end)
-
-local collecting = false
-local collect_thread
-
+-- AUTOCOLLECT LOGIC
 local function getMyFarm()
     for _, farm in pairs(workspace.Farm:GetChildren()) do
         local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
@@ -620,7 +631,7 @@ local function getMyHarvestableCrops()
 end
 
 local function isInventoryFull()
-    return #localPlayer.Backpack:GetChildren() >= 200
+    return #localPlayer.Backpack:GetChildren() >= autosell_threshold
 end
 
 local function sellInventory()
@@ -703,6 +714,8 @@ autocollect_toggle.MouseButton1Click:Connect(function()
         end
     end
 end)
+
+
 
 -- === AUTOBUY GEARS TAB ===
 local gears = {
