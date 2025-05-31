@@ -806,8 +806,7 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
 end)
 
 
-
--- === MAIN TAB (Honey Shop Autobuy as scrollable, rest of buttons always visible) ===
+-- === MAIN TAB (Honey Shop Autobuy as scrollable, compact buttons, always visible) ===
 
 local MainTab = CreateTab("Main")
 
@@ -886,10 +885,17 @@ local function get_autobuy_honey_list()
     return t
 end
 
--- Autobuy button (next to scrolling list)
+-- Compact button settings
+local buttonWidth = 0.36
+local buttonHeight = 28
+local buttonX = 0.62
+local firstButtonY = 28 + 92 + 8 -- 28 for label, 92 for scroll, 8 for spacing
+local buttonSpacing = 12
+
+-- Autobuy button (first, on left for vertical stack)
 local autobuy_honey_toggle = Instance.new("TextButton", MainTab)
-autobuy_honey_toggle.Size = UDim2.new(0.28, 0, 0, 38)
-autobuy_honey_toggle.Position = UDim2.new(0.84, -2, 0, 28)
+autobuy_honey_toggle.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+autobuy_honey_toggle.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 0)
 autobuy_honey_toggle.BackgroundColor3 = Theme.Button
 autobuy_honey_toggle.TextColor3 = Theme.Text
 autobuy_honey_toggle.Font = Enum.Font.GothamBold
@@ -919,19 +925,16 @@ autobuy_honey_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Calculate offset for next button group
-local baseY = 28 + 92 + 8 -- 28 for label, 92 for scroll, 8 for spacing
-
 ----------------------
 -- Mutation ESP Button
 ----------------------
 local mutEspBtn = Instance.new("TextButton", MainTab)
-mutEspBtn.Size = UDim2.new(0.7, 0, 0, 38)
-mutEspBtn.Position = UDim2.new(0.15, 0, 0, baseY + 0)
+mutEspBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+mutEspBtn.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 1)
 mutEspBtn.BackgroundColor3 = Theme.Button
 mutEspBtn.TextColor3 = Theme.Text
 mutEspBtn.Font = Enum.Font.GothamBold
-mutEspBtn.TextSize = 19
+mutEspBtn.TextSize = 15
 mutEspBtn.Text = "Start Mutation ESP"
 Instance.new("UICorner", mutEspBtn).CornerRadius = UDim.new(0, 8)
 
@@ -997,12 +1000,12 @@ end)
 -- Honey ESP Button
 -----------------------
 local honeyEspBtn = Instance.new("TextButton", MainTab)
-honeyEspBtn.Size = UDim2.new(0.7, 0, 0, 38)
-honeyEspBtn.Position = UDim2.new(0.15, 0, 0, baseY + 46)
+honeyEspBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+honeyEspBtn.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 2)
 honeyEspBtn.BackgroundColor3 = Theme.Button
 honeyEspBtn.TextColor3 = Theme.Text
 honeyEspBtn.Font = Enum.Font.GothamBold
-honeyEspBtn.TextSize = 19
+honeyEspBtn.TextSize = 15
 honeyEspBtn.Text = "Start Honey ESP"
 Instance.new("UICorner", honeyEspBtn).CornerRadius = UDim.new(0, 8)
 
@@ -1064,12 +1067,12 @@ end)
 -- Honey Collect ONLY Button
 -----------------------
 local honeyCollectBtn = Instance.new("TextButton", MainTab)
-honeyCollectBtn.Size = UDim2.new(0.7, 0, 0, 38)
-honeyCollectBtn.Position = UDim2.new(0.15, 0, 0, baseY + 92)
+honeyCollectBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
+honeyCollectBtn.Position = UDim2.new(buttonX, 0, 0, firstButtonY + (buttonHeight + buttonSpacing) * 3)
 honeyCollectBtn.BackgroundColor3 = Theme.Button
 honeyCollectBtn.TextColor3 = Theme.Text
 honeyCollectBtn.Font = Enum.Font.GothamBold
-honeyCollectBtn.TextSize = 19
+honeyCollectBtn.TextSize = 15
 honeyCollectBtn.Text = "Start Honey Collect Only"
 Instance.new("UICorner", honeyCollectBtn).CornerRadius = UDim.new(0, 8)
 
@@ -1189,6 +1192,7 @@ honeyCollectBtn.MouseButton1Click:Connect(function()
         clr()
     end
 end)
+
 
 
 
