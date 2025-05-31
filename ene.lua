@@ -981,8 +981,8 @@ end)
 local HttpService = game:GetService("HttpService")
 local webhookReq = (syn and syn.request) or (http and http.request) or http_request or request or httprequest
 local localPlayer = game:GetService("Players").LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 
--- === WEBHOOK TAB UI ===
 local WebhookTab = CreateTab("Webhook")
 
 local webhookFrame = Instance.new("Frame", WebhookTab)
@@ -1022,7 +1022,7 @@ notifLabel.TextSize = 16
 notifLabel.Text = ""
 notifLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- === SLIDER (FULLY DRAGGABLE) ===
+-- === SLIDER (FULLY DRAGGABLE, PC+MOBILE) ===
 local sliderFrame = Instance.new("Frame", WebhookTab)
 sliderFrame.Size = UDim2.new(1, -40, 0, 26)
 sliderFrame.Position = UDim2.new(0, 20, 0, 130)
@@ -1056,13 +1056,13 @@ local minValue, maxValue = 1, 60
 local sliderDragging = false
 local sliderValue = 3
 
+local dragInputConn
 local function setSliderKnobFromValue(val)
     local barWidth = sliderBar.AbsoluteSize.X
     local rel = (val - minValue) / (maxValue - minValue)
     local knobX = rel * barWidth
     sliderKnob.Position = UDim2.new(0, 22 + knobX - sliderKnob.Size.X.Offset / 2, 0.5, -11)
 end
-
 local function updateSliderFromX(x)
     local left = sliderBar.AbsolutePosition.X
     local width = sliderBar.AbsoluteSize.X
@@ -1071,42 +1071,49 @@ local function updateSliderFromX(x)
     setSliderKnobFromValue(sliderValue)
     sliderLabel.Text = ("Send notification every %d minute%s"):format(sliderValue, sliderValue == 1 and "" or "s")
 end
+local function startDrag(input)
+    sliderDragging = true
+    updateSliderFromX(input.Position.X)
+    if dragInputConn then dragInputConn:Disconnect() end
+    dragInputConn = UserInputService.InputChanged:Connect(function(moveInput)
+        if sliderDragging and (moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch) then
+            updateSliderFromX(moveInput.Position.X)
+        end
+    end)
+end
+local function endDrag()
+    sliderDragging = false
+    if dragInputConn then dragInputConn:Disconnect() end
+end
 
 sliderKnob.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = true
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        startDrag(input)
     end
 end)
 sliderKnob.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = false
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        endDrag()
     end
 end)
 sliderBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = true
-        updateSliderFromX(input.Position.X)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        startDrag(input)
     end
 end)
 sliderBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = false
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        endDrag()
     end
 end)
 sliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = true
-        updateSliderFromX(input.Position.X)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        startDrag(input)
     end
 end)
 sliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        sliderDragging = false
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if sliderDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        updateSliderFromX(input.Position.X)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        endDrag()
     end
 end)
 
