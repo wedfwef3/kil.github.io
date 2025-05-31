@@ -809,14 +809,6 @@ end)
 -- === MAIN TAB (all ESP/collect buttons) ===
 local MainTab = CreateTab("Main")
 
-local function getMyFarm()
-    for _, f in ipairs(workspace.Farm:GetChildren()) do
-        local d = f:FindFirstChild("Important") and f.Important:FindFirstChild("Data")
-        if d and d:FindFirstChild("Owner") and d.Owner.Value == localPlayer.Name then
-            return f
-        end
-    end
-end
 
 local function clr()
     for _, v in ipairs(workspace:GetDescendants()) do
