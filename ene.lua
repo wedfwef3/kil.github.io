@@ -805,10 +805,10 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Mutation ESP Tab (with toggle button and compact ESP)
-local EspTab = CreateTab("Mutation ESP")
+-- === MAIN TAB (formerly Mutation ESP) ===
+local MainTab = CreateTab("Main")
 
-local espToggle = Instance.new("TextButton", EspTab)
+local espToggle = Instance.new("TextButton", MainTab)
 espToggle.Size = UDim2.new(0.7, 0, 0, 46)
 espToggle.Position = UDim2.new(0.15, 0, 0, 32)
 espToggle.BackgroundColor3 = Theme.Button
@@ -821,15 +821,26 @@ Instance.new("UICorner", espToggle).CornerRadius = UDim.new(0, 8)
 local espRunning = false
 local espThread
 
-local m={"Wet","Gold","Frozen","Rainbow","Choc","Chilled","Shocked","Moonlit","Bloodlit","Celestial","Disco","Zombified","Plasma"}
-local c={Wet=Color3.fromRGB(100,200,255),Gold=Color3.fromRGB(255,215,0),Frozen=Color3.fromRGB(135,206,235),Rainbow=Color3.fromRGB(255,0,255),Choc=Color3.fromRGB(120,72,0),Chilled=Color3.fromRGB(170,230,255),Shocked=Color3.fromRGB(255,255,100),Moonlit=Color3.fromRGB(150,100,255),Bloodlit=Color3.fromRGB(200,10,60),Celestial=Color3.fromRGB(200,255,255),Disco=Color3.fromRGB(255,120,255),Zombified=Color3.fromRGB(80,255,100),Plasma=Color3.fromRGB(60,255,255)}
-local p=game.Players.LocalPlayer
+local mutations = {
+    "Wet","Gold","Frozen","Rainbow","Choc","Chilled","Shocked","Moonlit","Bloodlit","Celestial",
+    "Disco","Zombified","Plasma","Honey Glazed","Pollinated"
+}
+local c = {
+    Wet=Color3.fromRGB(100,200,255),Gold=Color3.fromRGB(255,215,0),Frozen=Color3.fromRGB(135,206,235),
+    Rainbow=Color3.fromRGB(255,0,255),Choc=Color3.fromRGB(120,72,0),Chilled=Color3.fromRGB(170,230,255),
+    Shocked=Color3.fromRGB(255,255,100),Moonlit=Color3.fromRGB(150,100,255),Bloodlit=Color3.fromRGB(200,10,60),
+    Celestial=Color3.fromRGB(200,255,255),Disco=Color3.fromRGB(255,120,255),Zombified=Color3.fromRGB(80,255,100),
+    Plasma=Color3.fromRGB(60,255,255),["Honey Glazed"]=Color3.fromRGB(255, 200, 75),Pollinated=Color3.fromRGB(225, 255, 130)
+}
+
+local p = game.Players.LocalPlayer
 
 local function clr()
     for _,v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BillboardGui") and v.Name=="MutationESP" then v:Destroy() end
     end
 end
+
 local function grd()
     for _,f in ipairs(workspace.Farm:GetChildren()) do
         local d=f:FindFirstChild("Important") and f.Important:FindFirstChild("Data")
@@ -851,7 +862,7 @@ espToggle.MouseButton1Click:Connect(function()
                     if pl then
                         for _,pt in ipairs(pl:GetChildren()) do
                             local fnd={}
-                            for _,mm in ipairs(m) do
+                            for _,mm in ipairs(mutations) do
                                 if pt:GetAttribute(mm) then table.insert(fnd,mm) end
                             end
                             if #fnd>0 then
@@ -888,6 +899,212 @@ espToggle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- === HONEY EVENT ESP TAB ===
+local HoneyEspTab = CreateTab("Honey Event ESP")
+local honeyEspToggle = Instance.new("TextButton", HoneyEspTab)
+honeyEspToggle.Size = UDim2.new(0.7, 0, 0, 46)
+honeyEspToggle.Position = UDim2.new(0.15, 0, 0, 32)
+honeyEspToggle.BackgroundColor3 = Theme.Button
+honeyEspToggle.TextColor3 = Theme.Text
+honeyEspToggle.Font = Enum.Font.GothamBold
+honeyEspToggle.TextSize = 22
+honeyEspToggle.Text = "Start Honey ESP"
+Instance.new("UICorner", honeyEspToggle).CornerRadius = UDim.new(0, 8)
+
+local honeyEspRunning = false
+local honeyEspThread
+
+honeyEspToggle.MouseButton1Click:Connect(function()
+    honeyEspRunning = not honeyEspRunning
+    if honeyEspRunning then
+        honeyEspToggle.Text = "Disable Honey ESP"
+        honeyEspToggle.BackgroundColor3 = Theme.Accent2
+        honeyEspThread = coroutine.create(function()
+            while honeyEspRunning do
+                clr()
+                local g=grd()
+                if g then
+                    local pl=g.Important:FindFirstChild("Plants_Physical")
+                    if pl then
+                        for _,pt in ipairs(pl:GetChildren()) do
+                            local fnd={}
+                            for _,mm in ipairs({"Honey Glazed","Pollinated"}) do
+                                if pt:GetAttribute(mm) then table.insert(fnd,mm) end
+                            end
+                            if #fnd>0 then
+                                local bp=pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
+                                if bp then
+                                    local gui=Instance.new("BillboardGui")
+                                    gui.Name="MutationESP"
+                                    gui.Adornee=bp
+                                    gui.Size=UDim2.new(0,100,0,20)
+                                    gui.AlwaysOnTop=true
+                                    gui.StudsOffset=Vector3.new(0,6,0)
+                                    local lbl=Instance.new("TextLabel",gui)
+                                    lbl.Size=UDim2.new(1,0,1,0)
+                                    lbl.BackgroundTransparency=1
+                                    lbl.Text=table.concat(fnd," + ")
+                                    lbl.TextColor3=c[fnd[1]] or Color3.new(1,1,1)
+                                    lbl.TextScaled=false
+                                    lbl.TextSize=12
+                                    lbl.Font=Enum.Font.GothamBold
+                                    gui.Parent=bp
+                                end
+                            end
+                        end
+                    end
+                end
+                wait(2)
+            end
+        end)
+        coroutine.resume(honeyEspThread)
+    else
+        honeyEspToggle.Text = "Start Honey ESP"
+        honeyEspToggle.BackgroundColor3 = Theme.Button
+        clr()
+    end
+end)
+
+-- === HONEY COLLECT ONLY TAB ===
+local HoneyCollectTab = CreateTab("Honey Collect Only")
+
+local honeyCollectToggle = Instance.new("TextButton", HoneyCollectTab)
+honeyCollectToggle.Size = UDim2.new(0.7, 0, 0, 46)
+honeyCollectToggle.Position = UDim2.new(0.15, 0, 0, 32)
+honeyCollectToggle.BackgroundColor3 = Theme.Button
+honeyCollectToggle.TextColor3 = Theme.Text
+honeyCollectToggle.Font = Enum.Font.GothamBold
+honeyCollectToggle.TextSize = 22
+honeyCollectToggle.Text = "Start Honey Collect"
+Instance.new("UICorner", honeyCollectToggle).CornerRadius = UDim.new(0, 8)
+
+local honeyCollecting = false
+local honeyCollectThread
+
+local function getMyFarm()
+    for _, farm in pairs(workspace.Farm:GetChildren()) do
+        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
+        if data and data:FindFirstChild("Owner") and data.Owner.Value == localPlayer.Name then
+            return farm
+        end
+    end
+    return nil
+end
+
+local function getMyHoneyCrops()
+    local myFarm = getMyFarm()
+    local crops = {}
+    if myFarm then
+        local plants = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical")
+        if plants then
+            for _, plant in pairs(plants:GetChildren()) do
+                for _, part in pairs(plant:GetDescendants()) do
+                    if part:IsA("BasePart") and part:FindFirstChildOfClass("ProximityPrompt") then
+                        -- Check for "Honey Glazed" or "Pollinated" mutation
+                        local parPlant = part.Parent
+                        if parPlant and (parPlant:GetAttribute("Honey Glazed") or parPlant:GetAttribute("Pollinated")) then
+                            table.insert(crops, part)
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+    return crops
+end
+
+local function isInventoryFull()
+    return #localPlayer.Backpack:GetChildren() >= 200
+end
+
+local function honeyCollectLoop()
+    while honeyCollecting do
+        -- ESP for honey crops only
+        clr()
+        local g = grd()
+        if g then
+            local pl = g.Important:FindFirstChild("Plants_Physical")
+            if pl then
+                for _, pt in ipairs(pl:GetChildren()) do
+                    local fnd = {}
+                    for _, mm in ipairs({"Honey Glazed", "Pollinated"}) do
+                        if pt:GetAttribute(mm) then table.insert(fnd, mm) end
+                    end
+                    if #fnd > 0 then
+                        local bp = pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
+                        if bp then
+                            local gui = Instance.new("BillboardGui")
+                            gui.Name = "MutationESP"
+                            gui.Adornee = bp
+                            gui.Size = UDim2.new(0, 100, 0, 20)
+                            gui.AlwaysOnTop = true
+                            gui.StudsOffset = Vector3.new(0, 6, 0)
+                            local lbl = Instance.new("TextLabel", gui)
+                            lbl.Size = UDim2.new(1, 0, 1, 0)
+                            lbl.BackgroundTransparency = 1
+                            lbl.Text = table.concat(fnd, " + ")
+                            lbl.TextColor3 = c[fnd[1]] or Color3.new(1,1,1)
+                            lbl.TextScaled = false
+                            lbl.TextSize = 12
+                            lbl.Font = Enum.Font.GothamBold
+                            gui.Parent = bp
+                        end
+                    end
+                end
+            end
+        end
+
+        if isInventoryFull() then
+            honeyCollectToggle.Text = "Backpack Full!"
+            repeat
+                task.wait(0.5)
+            until not isInventoryFull() or not honeyCollecting
+            honeyCollectToggle.Text = "Stop Honey Collect"
+        end
+        if not honeyCollecting then break end
+
+        local crops = getMyHoneyCrops()
+        for _, crop in ipairs(crops) do
+            if not honeyCollecting then return end
+            if isInventoryFull() then break end
+            local char = localPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp and crop and crop.Parent then
+                hrp.CFrame = CFrame.new(crop.Position + Vector3.new(0, 3, 0))
+                task.wait(0.15)
+                local prompt = crop:FindFirstChildOfClass("ProximityPrompt")
+                if prompt then
+                    pcall(function()
+                        fireproximityprompt(prompt)
+                    end)
+                    task.wait(0.1)
+                end
+            end
+        end
+        task.wait(0.2)
+    end
+    honeyCollectToggle.Text = "Start Honey Collect"
+    honeyCollectToggle.BackgroundColor3 = Theme.Button
+    clr()
+end
+
+honeyCollectToggle.MouseButton1Click:Connect(function()
+    honeyCollecting = not honeyCollecting
+    if honeyCollecting then
+        honeyCollectToggle.Text = "Stop Honey Collect"
+        honeyCollectToggle.BackgroundColor3 = Theme.Accent2
+        honeyCollectThread = task.spawn(honeyCollectLoop)
+    else
+        honeyCollectToggle.Text = "Start Honey Collect"
+        honeyCollectToggle.BackgroundColor3 = Theme.Button
+        if honeyCollectThread then
+            task.cancel(honeyCollectThread)
+            honeyCollectThread = nil
+        end
+        clr()
+    end
+end)
 
 
 local HttpService = game:GetService("HttpService")
