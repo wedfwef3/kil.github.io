@@ -889,7 +889,7 @@ espToggle.MouseButton1Click:Connect(function()
 end)
 
 
--- === SETTINGS TAB FOR GROW-A-GARDEN AUTO HUB ===
+
 local HttpService = game:GetService("HttpService")
 local CONFIG_FILE = "MyGardenConfig.json"
 local Theme = Theme
@@ -917,8 +917,6 @@ joinLowServerBtn.Font = Enum.Font.GothamBold
 joinLowServerBtn.TextSize = 18
 joinLowServerBtn.Text = "Join Low Server"
 Instance.new("UICorner", joinLowServerBtn).CornerRadius = UDim.new(0, 12)
-
--- Logic: Find & teleport to lowest player count server
 joinLowServerBtn.MouseButton1Click:Connect(function()
     notifLabel.Text = "Searching for low server..."
     local Http = game:GetService("HttpService")
@@ -954,7 +952,7 @@ joinLowServerBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Hide/Show Other Farms Button
+-- Delete Other Farms Button
 local otherFarmBtn = Instance.new("TextButton", SettingsTab)
 otherFarmBtn.Size = UDim2.new(0, 180, 0, 36)
 otherFarmBtn.Position = UDim2.new(0, 220, 0, 50)
@@ -962,24 +960,21 @@ otherFarmBtn.BackgroundColor3 = Theme.Button
 otherFarmBtn.TextColor3 = Theme.Text
 otherFarmBtn.Font = Enum.Font.GothamBold
 otherFarmBtn.TextSize = 18
-otherFarmBtn.Text = "Hide Other Farms"
+otherFarmBtn.Text = "Delete Other Farms"
 Instance.new("UICorner", otherFarmBtn).CornerRadius = UDim.new(0, 12)
-
-local otherFarmsHidden = false
 otherFarmBtn.MouseButton1Click:Connect(function()
     local myName = game.Players.LocalPlayer.Name
     for _, farm in ipairs(workspace.Farm:GetChildren()) do
         local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
         if data and data:FindFirstChild("Owner") and data.Owner.Value ~= myName then
-            farm.Parent = otherFarmsHidden and workspace.Farm or workspace
+            farm:Destroy()
         end
     end
-    otherFarmsHidden = not otherFarmsHidden
-    otherFarmBtn.Text = otherFarmsHidden and "Show Other Farms" or "Hide Other Farms"
-    notifLabel.Text = otherFarmsHidden and "Other farms hidden!" or "Other farms shown!"
+    notifLabel.Text = "Other farms deleted."
+    otherFarmBtn.Visible = false
 end)
 
--- Save/load helpers for checkboxes/toggles
+-- Helpers for config
 local function getSelected(tbl)
     local out = {}
     for k, v in pairs(tbl) do
@@ -993,10 +988,12 @@ local function setSelected(tbl, checkboxes, arr)
     for _,v in ipairs(arr or {}) do
         tbl[v] = true
     end
-    for name, btn in pairs(checkboxes) do
+    for name, btn in pairs(checkboxes or {}) do
         local checked = tbl[name]
-        btn.Text = checked and "[✔] "..name or "[  ] "..name
-        btn.BackgroundColor3 = checked and Theme.Accent or Theme.Button
+        if btn then
+            btn.Text = checked and "[✔] "..name or "[  ] "..name
+            btn.BackgroundColor3 = checked and Theme.Accent or Theme.Button
+        end
     end
 end
 
@@ -1064,7 +1061,6 @@ task.spawn(function()
     if config.autogear then setSelected(autobuy_gear_selected, gears_checkboxes, config.autogear) end
     if config.webhook and webhookBox then webhookBox.Text = config.webhook end
 end)
-
 
 
 local HttpService = game:GetService("HttpService")
