@@ -1060,44 +1060,57 @@ local honeyEspThread
 
 honeyEspBtn.MouseButton1Click:Connect(function()
     honeyEspRunning = not honeyEspRunning
+    local mutationName = "Pollinated"
+    local mutationColor = Color3.fromRGB(255, 225, 80)
+    local function clearESP()
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BillboardGui") and v.Name=="MutationESP" then v:Destroy() end
+        end
+    end
+    local function getMyFarm()
+        for _,farm in ipairs(workspace.Farm:GetChildren()) do
+            local d = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
+            if d and d:FindFirstChild("Owner") and d.Owner.Value == localPlayer.Name then
+                return farm
+            end
+        end
+    end
+    local function showPollinatedESP()
+        clearESP()
+        local myFarm = getMyFarm()
+        if not myFarm then return end
+        local plants = myFarm.Important and myFarm.Important:FindFirstChild("Plants_Physical")
+        if not plants then return end
+        for _,plant in ipairs(plants:GetChildren()) do
+            if plant:GetAttribute(mutationName) then
+                for _,bp in ipairs(plant:GetDescendants()) do
+                    if bp:IsA("BasePart") then
+                        local gui = Instance.new("BillboardGui")
+                        gui.Name = "MutationESP"
+                        gui.Adornee = bp
+                        gui.Size = UDim2.new(0, 100, 0, 20)
+                        gui.AlwaysOnTop = true
+                        gui.StudsOffset = Vector3.new(0, 6, 0)
+                        local lbl = Instance.new("TextLabel", gui)
+                        lbl.Size = UDim2.new(1, 0, 1, 0)
+                        lbl.BackgroundTransparency = 1
+                        lbl.Text = mutationName
+                        lbl.TextColor3 = mutationColor
+                        lbl.TextSize = 13
+                        lbl.Font = Enum.Font.GothamBold
+                        gui.Parent = bp
+                    end
+                end
+            end
+        end
+    end
+
     if honeyEspRunning then
         honeyEspBtn.Text = "Disable Honey ESP"
         honeyEspBtn.BackgroundColor3 = Theme.Accent2
         honeyEspThread = coroutine.create(function()
             while honeyEspRunning do
-                clr()
-                local g = getMyFarm()
-                if g then
-                    local pl = g.Important:FindFirstChild("Plants_Physical")
-                    if pl then
-                        for _, pt in ipairs(pl:GetChildren()) do
-                            local fnd = {}
-                            for _, mm in ipairs({"Honey Glazed", "Pollinated"}) do
-                                if pt:GetAttribute(mm) then table.insert(fnd, mm) end
-                            end
-                            if #fnd > 0 then
-                                local bp = pt:FindFirstChildWhichIsA("BasePart") or pt.PrimaryPart
-                                if bp then
-                                    local gui = Instance.new("BillboardGui")
-                                    gui.Name = "MutationESP"
-                                    gui.Adornee = bp
-                                    gui.Size = UDim2.new(0, 100, 0, 20)
-                                    gui.AlwaysOnTop = true
-                                    gui.StudsOffset = Vector3.new(0, 6, 0)
-                                    local lbl = Instance.new("TextLabel", gui)
-                                    lbl.Size = UDim2.new(1, 0, 1, 0)
-                                    lbl.BackgroundTransparency = 1
-                                    lbl.Text = table.concat(fnd, " + ")
-                                    lbl.TextColor3 = c[fnd[1]] or Color3.new(1,1,1)
-                                    lbl.TextScaled = false
-                                    lbl.TextSize = 12
-                                    lbl.Font = Enum.Font.GothamBold
-                                    gui.Parent = bp
-                                end
-                            end
-                        end
-                    end
-                end
+                showPollinatedESP()
                 wait(2)
             end
         end)
@@ -1105,7 +1118,17 @@ honeyEspBtn.MouseButton1Click:Connect(function()
     else
         honeyEspBtn.Text = "Start Honey ESP"
         honeyEspBtn.BackgroundColor3 = Theme.Button
-        clr()
+        if honeyEspThread then
+            honeyEspRunning = false
+            honeyEspThread = nil
+        end
+        -- Clear ESP immediately when disabled
+        local function clearESP()
+            for _,v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("BillboardGui") and v.Name=="MutationESP" then v:Destroy() end
+            end
+        end
+        clearESP()
     end
 end)
 
