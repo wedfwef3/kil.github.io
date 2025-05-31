@@ -1054,7 +1054,7 @@ sliderLabel.Text = "Send notification every 3 minutes"
 
 local minValue, maxValue = 1, 60
 local sliderDragging = false
-local sliderValue = 3
+local sliderValue = 1
 
 local dragInputConn
 local function setSliderKnobFromValue(val)
@@ -1120,17 +1120,15 @@ end)
 setSliderKnobFromValue(sliderValue)
 sliderLabel.Text = ("Send notification every %d minute%s"):format(sliderValue, sliderValue == 1 and "" or "s")
 
--- === WEBHOOK LOGIC ===
+-- === WEBHOOK LOGIC (GAINS ONLY) ===
 local leaderstats = localPlayer:WaitForChild("leaderstats")
 local shecklesStat = leaderstats:WaitForChild("Sheckles")
-
-local itemTotals = {}
-local lastBackpackSnapshot = {}
 
 local webhookActive = false
 local webhookUrl = ""
 local trackerThread = nil
 local sessionStart = tick()
+local startingInventory = {}
 
 -- Group by base name (ignore [brackets])
 local function getBaseName(name)
@@ -1151,13 +1149,18 @@ local function getCurrentInventory()
     return counts
 end
 
-local function formatTotals()
+local function formatTotalsGained()
     local lines = {}
-    for item, amt in pairs(itemTotals) do
-        table.insert(lines, ("%s: %d"):format(item, amt))
+    local current = getCurrentInventory()
+    for item, count in pairs(current) do
+        local startCount = startingInventory[item] or 0
+        local gained = count - startCount
+        if gained > 0 then
+            table.insert(lines, ("%s: %d"):format(item, gained))
+        end
     end
     table.sort(lines)
-    return table.concat(lines, "\n")
+    return #lines > 0 and table.concat(lines, "\n") or "No new items gained."
 end
 
 local function fmt(n)
@@ -1171,11 +1174,11 @@ end
 local function sendWebhook(username, currentMoney, uptime)
     if webhookUrl == "" then return end
     local embed = {
-        title = ("%s's Garden Item Totals"):format(username),
+        title = ("%s's Garden Gained Items"):format(username),
         color = 0x48db6a,
         fields = {
             { name = "Total Money", value = fmt(currentMoney), inline = false },
-            { name = "Item Totals", value = ("```%s```"):format(formatTotals()), inline = false },
+            { name = "Items Gained", value = ("```%s```"):format(formatTotalsGained()), inline = false },
             { name = "Session Uptime", value = uptime, inline = false }
         }
     }
@@ -1195,17 +1198,6 @@ local function sendWebhook(username, currentMoney, uptime)
     end
 end
 
-local function updateTotalsByBackpackDelta()
-    local current = getCurrentInventory()
-    for item, count in pairs(current) do
-        local prev = lastBackpackSnapshot[item] or 0
-        if count > prev then
-            itemTotals[item] = (itemTotals[item] or 0) + (count - prev)
-        end
-    end
-    lastBackpackSnapshot = current
-end
-
 local function startWebhook()
     webhookActive = true
     notifLabel.Text = "Webhook tracking started."
@@ -1213,17 +1205,13 @@ local function startWebhook()
     if trackerThread then
         task.cancel(trackerThread)
     end
-    lastBackpackSnapshot = getCurrentInventory()
-    for item, count in pairs(lastBackpackSnapshot) do
-        itemTotals[item] = count
-    end
+    startingInventory = getCurrentInventory() -- snapshot at start
     trackerThread = task.spawn(function()
         while webhookActive do
             for i = 1, sliderValue * 60 do
                 if not webhookActive then return end
                 task.wait(1)
             end
-            updateTotalsByBackpackDelta()
             local nowMoney = shecklesStat.Value
             local uptime = os.date("!%X", math.floor(tick() - sessionStart))
             sendWebhook(localPlayer.Name, nowMoney, uptime)
@@ -1251,7 +1239,6 @@ checkBtn.MouseButton1Click:Connect(function()
     stopWebhook()
     startWebhook()
 end)
-
 
 -- === DRAGGABLE MAIN FRAME ===
 local dragging = false
