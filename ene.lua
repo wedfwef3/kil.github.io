@@ -806,7 +806,7 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
 end)
 
 
--- === MAIN TAB (Honey Shop Autobuy as scrollable, compact buttons, always visible, with Shop UI button and moved Honey Collect Only) ===
+-- === MAIN TAB (Corrected: Vertical left stack for collect/shop, right-aligned ESP/autobuy) ===
 
 local MainTab = CreateTab("Main")
 
@@ -833,18 +833,18 @@ local autobuy_honey_thread
 -- Label
 local AutobuyHoneyLabel = Instance.new("TextLabel", MainTab)
 AutobuyHoneyLabel.Text = "Autobuy Honey Shop Items:"
-AutobuyHoneyLabel.Size = UDim2.new(0.68, 0, 0, 20)
-AutobuyHoneyLabel.Position = UDim2.new(0.15, 0, 0, 6)
+AutobuyHoneyLabel.Size = UDim2.new(0.45, 0, 0, 20)
+AutobuyHoneyLabel.Position = UDim2.new(0.075, 0, 0, 6)
 AutobuyHoneyLabel.BackgroundTransparency = 1
 AutobuyHoneyLabel.TextColor3 = Theme.Text
 AutobuyHoneyLabel.Font = Enum.Font.GothamBold
 AutobuyHoneyLabel.TextSize = 16
 AutobuyHoneyLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- ScrollingFrame for checkboxes
+-- ScrollingFrame for checkboxes (left column)
 local itemScroll = Instance.new("ScrollingFrame", MainTab)
-itemScroll.Size = UDim2.new(0.68, 0, 0, 92) -- (4 items * 22 + 4 spacing)
-itemScroll.Position = UDim2.new(0.15, 0, 0, 28)
+itemScroll.Size = UDim2.new(0.45, 0, 0, 92)
+itemScroll.Position = UDim2.new(0.075, 0, 0, 28)
 itemScroll.BackgroundColor3 = Theme.Button
 itemScroll.BackgroundTransparency = 0.1
 itemScroll.BorderSizePixel = 0
@@ -887,14 +887,16 @@ end
 -- Compact button settings
 local buttonWidth = 0.36
 local buttonHeight = 28
-local buttonX = 0.62
-local scrollBottomY = 28 + 92 + 8 -- 28 for label, 92 for scroll, 8 for spacing
-local buttonSpacing = 12
+local rightButtonX = 0.62
+local leftButtonX = 0.075
+local scrollBottomY = 28 + 92
+local leftButtonSpacing = 10
+local rightButtonSpacing = 12
 
--- Honey Collect Only button (just below scroll area)
+-- LEFT COLUMN: Start Honey Collect Only (under scroll)
 local honeyCollectBtn = Instance.new("TextButton", MainTab)
-honeyCollectBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-honeyCollectBtn.Position = UDim2.new(buttonX, 0, 0, scrollBottomY)
+honeyCollectBtn.Size = UDim2.new(0.45, 0, 0, buttonHeight)
+honeyCollectBtn.Position = UDim2.new(leftButtonX, 0, 0, scrollBottomY + leftButtonSpacing)
 honeyCollectBtn.BackgroundColor3 = Theme.Button
 honeyCollectBtn.TextColor3 = Theme.Text
 honeyCollectBtn.Font = Enum.Font.GothamBold
@@ -902,10 +904,10 @@ honeyCollectBtn.TextSize = 15
 honeyCollectBtn.Text = "Start Honey Collect Only"
 Instance.new("UICorner", honeyCollectBtn).CornerRadius = UDim.new(0, 8)
 
--- Open Shop UI button (directly under Honey Collect Only)
+-- LEFT COLUMN: Open Shop UI (under collect)
 local openShopBtn = Instance.new("TextButton", MainTab)
-openShopBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-openShopBtn.Position = UDim2.new(buttonX, 0, 0, scrollBottomY + buttonHeight + buttonSpacing)
+openShopBtn.Size = UDim2.new(0.45, 0, 0, buttonHeight)
+openShopBtn.Position = UDim2.new(leftButtonX, 0, 0, scrollBottomY + buttonHeight + leftButtonSpacing * 2)
 openShopBtn.BackgroundColor3 = Theme.Button
 openShopBtn.TextColor3 = Theme.Text
 openShopBtn.Font = Enum.Font.GothamBold
@@ -924,13 +926,12 @@ openShopBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Next buttons (Autobuy, Mutation ESP, Honey ESP) stack below Open Shop UI
-local buttonStartY = scrollBottomY + (buttonHeight + buttonSpacing) * 2
-
+-- RIGHT COLUMN: Start Autobuy, Mutation ESP, Honey ESP (top aligned)
+local rightButtonStartY = 28
 -- Start Autobuy
 local autobuy_honey_toggle = Instance.new("TextButton", MainTab)
 autobuy_honey_toggle.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-autobuy_honey_toggle.Position = UDim2.new(buttonX, 0, 0, buttonStartY + (buttonHeight + buttonSpacing) * 0)
+autobuy_honey_toggle.Position = UDim2.new(rightButtonX, 0, 0, rightButtonStartY + (buttonHeight + rightButtonSpacing) * 0)
 autobuy_honey_toggle.BackgroundColor3 = Theme.Button
 autobuy_honey_toggle.TextColor3 = Theme.Text
 autobuy_honey_toggle.Font = Enum.Font.GothamBold
@@ -960,12 +961,10 @@ autobuy_honey_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
-----------------------
--- Mutation ESP Button
-----------------------
+-- Start Mutation ESP
 local mutEspBtn = Instance.new("TextButton", MainTab)
 mutEspBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-mutEspBtn.Position = UDim2.new(buttonX, 0, 0, buttonStartY + (buttonHeight + buttonSpacing) * 1)
+mutEspBtn.Position = UDim2.new(rightButtonX, 0, 0, rightButtonStartY + (buttonHeight + rightButtonSpacing) * 1)
 mutEspBtn.BackgroundColor3 = Theme.Button
 mutEspBtn.TextColor3 = Theme.Text
 mutEspBtn.Font = Enum.Font.GothamBold
@@ -1045,12 +1044,10 @@ mutEspBtn.MouseButton1Click:Connect(function()
     end
 end)
 
------------------------
--- Honey ESP Button
------------------------
+-- Start Honey ESP
 local honeyEspBtn = Instance.new("TextButton", MainTab)
 honeyEspBtn.Size = UDim2.new(buttonWidth, 0, 0, buttonHeight)
-honeyEspBtn.Position = UDim2.new(buttonX, 0, 0, buttonStartY + (buttonHeight + buttonSpacing) * 2)
+honeyEspBtn.Position = UDim2.new(rightButtonX, 0, 0, rightButtonStartY + (buttonHeight + rightButtonSpacing) * 2)
 honeyEspBtn.BackgroundColor3 = Theme.Button
 honeyEspBtn.TextColor3 = Theme.Text
 honeyEspBtn.Font = Enum.Font.GothamBold
@@ -1228,6 +1225,7 @@ honeyCollectBtn.MouseButton1Click:Connect(function()
         clr()
     end
 end)
+
 
 
 
