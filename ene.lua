@@ -1054,7 +1054,7 @@ sliderLabel.Text = "Send notification every 3 minutes"
 
 local minValue, maxValue = 1, 60
 local sliderDragging = false
-local sliderValue = 3
+local sliderValue = 1
 
 local dragInputConn
 local function setSliderKnobFromValue(val)
@@ -1251,7 +1251,6 @@ checkBtn.MouseButton1Click:Connect(function()
     stopWebhook()
     startWebhook()
 end)
-
 
 
 -- === DRAGGABLE MAIN FRAME ===
