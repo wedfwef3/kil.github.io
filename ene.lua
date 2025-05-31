@@ -889,14 +889,12 @@ espToggle.MouseButton1Click:Connect(function()
 end)
 
 
+-- === SETTINGS TAB FOR GROW-A-GARDEN AUTO HUB ===
 local HttpService = game:GetService("HttpService")
+local CONFIG_FILE = "MyGardenConfig.json"
+local Theme = Theme
+
 local SettingsTab = CreateTab("Settings")
-local Theme = Theme or {
-    Button = Color3.fromRGB(60,60,60),
-    Accent = Color3.fromRGB(140,180,240),
-    Accent2 = Color3.fromRGB(100,255,160),
-    Text = Color3.fromRGB(240,240,240)
-}
 
 -- Notification label for status messages
 local notifLabel = Instance.new("TextLabel", SettingsTab)
@@ -909,101 +907,98 @@ notifLabel.TextSize = 16
 notifLabel.Text = ""
 notifLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Sample toggles for Autobuy, Autosell, Autoplant
-local function makeToggle(name, y)
-    local toggleFrame = Instance.new("Frame", SettingsTab)
-    toggleFrame.Size = UDim2.new(0, 160, 0, 36)
-    toggleFrame.Position = UDim2.new(0, 20, 0, y)
-    toggleFrame.BackgroundColor3 = Theme.Button
-    Instance.new("UICorner", toggleFrame).CornerRadius = UDim.new(0, 12)
-
-    local toggleLabel = Instance.new("TextLabel", toggleFrame)
-    toggleLabel.Size = UDim2.new(1, -44, 1, 0)
-    toggleLabel.Position = UDim2.new(0, 12, 0, 0)
-    toggleLabel.BackgroundTransparency = 1
-    toggleLabel.TextColor3 = Theme.Text
-    toggleLabel.Font = Enum.Font.Gotham
-    toggleLabel.TextSize = 18
-    toggleLabel.Text = name
-    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    local toggleBtn = Instance.new("TextButton", toggleFrame)
-    toggleBtn.Size = UDim2.new(0, 28, 0, 28)
-    toggleBtn.Position = UDim2.new(1, -36, 0.5, -14)
-    toggleBtn.BackgroundColor3 = Theme.Accent
-    toggleBtn.TextColor3 = Theme.Text
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 18
-    toggleBtn.Text = "✗"
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
-
-    local state = false
-    toggleBtn.MouseButton1Click:Connect(function()
-        state = not state
-        toggleBtn.Text = state and "✓" or "✗"
-        toggleBtn.BackgroundColor3 = state and Theme.Accent2 or Theme.Accent
-    end)
-
-    local toggle = {}
-    function toggle:Set(val)
-        state = val and true or false
-        toggleBtn.Text = state and "✓" or "✗"
-        toggleBtn.BackgroundColor3 = state and Theme.Accent2 or Theme.Accent
-    end
-    function toggle:Get()
-        return state
-    end
-
-    return toggle
-end
-
-local autobuyToggle = makeToggle("Autobuy", 54)
-local autosellToggle = makeToggle("Autosell", 100)
-local autoplantToggle = makeToggle("Autoplant", 146)
-
--- Webhook URL input box
-local webhookFrame = Instance.new("Frame", SettingsTab)
-webhookFrame.Size = UDim2.new(1, -40, 0, 44)
-webhookFrame.Position = UDim2.new(0, 20, 0, 196)
-webhookFrame.BackgroundColor3 = Theme.Button
-Instance.new("UICorner", webhookFrame).CornerRadius = UDim.new(0, 12)
-
-local webhookBox = Instance.new("TextBox", webhookFrame)
-webhookBox.Size = UDim2.new(1, -24, 1, 0)
-webhookBox.Position = UDim2.new(0, 12, 0, 0)
-webhookBox.BackgroundTransparency = 1
-webhookBox.TextColor3 = Theme.Text
-webhookBox.Font = Enum.Font.Gotham
-webhookBox.TextSize = 18
-webhookBox.Text = ""
-webhookBox.PlaceholderText = "Paste your Discord webhook here..."
-webhookBox.ClearTextOnFocus = false
-
--- Example FARM/JOIN SERVER BUTTONS (keep your originals here if you want)
+-- Join Low Server Button
 local joinLowServerBtn = Instance.new("TextButton", SettingsTab)
 joinLowServerBtn.Size = UDim2.new(0, 180, 0, 36)
-joinLowServerBtn.Position = UDim2.new(0, 20, 0, 250)
+joinLowServerBtn.Position = UDim2.new(0, 20, 0, 50)
 joinLowServerBtn.BackgroundColor3 = Theme.Accent
 joinLowServerBtn.TextColor3 = Theme.Text
 joinLowServerBtn.Font = Enum.Font.GothamBold
 joinLowServerBtn.TextSize = 18
 joinLowServerBtn.Text = "Join Low Server"
 Instance.new("UICorner", joinLowServerBtn).CornerRadius = UDim.new(0, 12)
--- (Add your join low server logic here)
 
+-- Logic: Find & teleport to lowest player count server
+joinLowServerBtn.MouseButton1Click:Connect(function()
+    notifLabel.Text = "Searching for low server..."
+    local Http = game:GetService("HttpService")
+    local servers = {}
+    local cursor = ""
+    local minPlayers, bestId = math.huge, nil
+    local placeId = game.PlaceId
+    local function fetchServers()
+        local url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100", placeId)
+        if cursor ~= "" then
+            url = url.."&cursor="..cursor
+        end
+        local response = game:HttpGet(url)
+        local data = Http:JSONDecode(response)
+        for _, server in ipairs(data.data or {}) do
+            if server.playing < minPlayers and server.playing > 0 and not server.full then
+                minPlayers = server.playing
+                bestId = server.id
+            end
+        end
+        cursor = data.nextPageCursor or ""
+        return cursor ~= ""
+    end
+    -- Try to find a low server (up to 3 pages)
+    for i = 1,3 do
+        if not fetchServers() then break end
+    end
+    if bestId then
+        notifLabel.Text = "Teleporting to low server..."
+        game:GetService("TeleportService"):TeleportToPlaceInstance(placeId, bestId)
+    else
+        notifLabel.Text = "No suitable server found!"
+    end
+end)
+
+-- Hide/Show Other Farms Button
 local otherFarmBtn = Instance.new("TextButton", SettingsTab)
 otherFarmBtn.Size = UDim2.new(0, 180, 0, 36)
-otherFarmBtn.Position = UDim2.new(0, 220, 0, 250)
+otherFarmBtn.Position = UDim2.new(0, 220, 0, 50)
 otherFarmBtn.BackgroundColor3 = Theme.Button
 otherFarmBtn.TextColor3 = Theme.Text
 otherFarmBtn.Font = Enum.Font.GothamBold
 otherFarmBtn.TextSize = 18
-otherFarmBtn.Text = "Other Farm"
+otherFarmBtn.Text = "Hide Other Farms"
 Instance.new("UICorner", otherFarmBtn).CornerRadius = UDim.new(0, 12)
--- (Add your other farm logic here)
 
--- --- CONFIG SAVE/RESET SECTION ---
-local CONFIG_FILE = "MyGardenConfig.json"
+local otherFarmsHidden = false
+otherFarmBtn.MouseButton1Click:Connect(function()
+    local myName = game.Players.LocalPlayer.Name
+    for _, farm in ipairs(workspace.Farm:GetChildren()) do
+        local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
+        if data and data:FindFirstChild("Owner") and data.Owner.Value ~= myName then
+            farm.Parent = otherFarmsHidden and workspace.Farm or workspace
+        end
+    end
+    otherFarmsHidden = not otherFarmsHidden
+    otherFarmBtn.Text = otherFarmsHidden and "Show Other Farms" or "Hide Other Farms"
+    notifLabel.Text = otherFarmsHidden and "Other farms hidden!" or "Other farms shown!"
+end)
+
+-- Save/load helpers for checkboxes/toggles
+local function getSelected(tbl)
+    local out = {}
+    for k, v in pairs(tbl) do
+        if v then table.insert(out, k) end
+    end
+    return out
+end
+
+local function setSelected(tbl, checkboxes, arr)
+    for k,_ in pairs(tbl) do tbl[k] = false end
+    for _,v in ipairs(arr or {}) do
+        tbl[v] = true
+    end
+    for name, btn in pairs(checkboxes) do
+        local checked = tbl[name]
+        btn.Text = checked and "[✔] "..name or "[  ] "..name
+        btn.BackgroundColor3 = checked and Theme.Accent or Theme.Button
+    end
+end
 
 local function loadConfig()
     if isfile(CONFIG_FILE) then
@@ -1014,11 +1009,9 @@ local function loadConfig()
     end
     return {}
 end
-
 local function saveConfig(config)
     writefile(CONFIG_FILE, HttpService:JSONEncode(config))
 end
-
 local function resetConfig()
     if isfile(CONFIG_FILE) then delfile(CONFIG_FILE) end
 end
@@ -1026,20 +1019,19 @@ end
 -- Save Config Button
 local saveBtn = Instance.new("TextButton", SettingsTab)
 saveBtn.Size = UDim2.new(0, 120, 0, 36)
-saveBtn.Position = UDim2.new(0, 20, 0, 300)
+saveBtn.Position = UDim2.new(0, 20, 0, 110)
 saveBtn.BackgroundColor3 = Theme.Accent
 saveBtn.TextColor3 = Theme.Text
 saveBtn.Font = Enum.Font.GothamBold
 saveBtn.TextSize = 18
 saveBtn.Text = "Save Config"
 Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 12)
-
 saveBtn.MouseButton1Click:Connect(function()
     local config = {
-        autobuy = autobuyToggle:Get(),
-        autosell = autosellToggle:Get(),
-        autoplant = autoplantToggle:Get(),
-        webhook = webhookBox.Text,
+        autobuy = getSelected(autobuy_selected),
+        autoplant = getSelected(autoplant_selected),
+        autogear = getSelected(autobuy_gear_selected),
+        webhook = webhookBox and webhookBox.Text or "",
     }
     saveConfig(config)
     notifLabel.Text = "✅ Config saved!"
@@ -1048,31 +1040,31 @@ end)
 -- Reset Config Button
 local resetBtn = Instance.new("TextButton", SettingsTab)
 resetBtn.Size = UDim2.new(0, 120, 0, 36)
-resetBtn.Position = UDim2.new(0, 160, 0, 300)
+resetBtn.Position = UDim2.new(0, 160, 0, 110)
 resetBtn.BackgroundColor3 = Theme.Button
 resetBtn.TextColor3 = Theme.Text
 resetBtn.Font = Enum.Font.GothamBold
 resetBtn.TextSize = 18
 resetBtn.Text = "Reset Config"
 Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 12)
-
 resetBtn.MouseButton1Click:Connect(function()
     resetConfig()
-    autobuyToggle:Set(false)
-    autosellToggle:Set(false)
-    autoplantToggle:Set(false)
-    webhookBox.Text = ""
+    setSelected(autobuy_selected, checkboxes, {})
+    setSelected(autoplant_selected, checkboxes_plant, {})
+    setSelected(autobuy_gear_selected, gears_checkboxes, {})
+    if webhookBox then webhookBox.Text = "" end
     notifLabel.Text = "Config reset."
 end)
 
--- Auto-load config on script load
+-- Auto-load config on script start
 task.spawn(function()
     local config = loadConfig()
-    if config.autobuy ~= nil then autobuyToggle:Set(config.autobuy) end
-    if config.autosell ~= nil then autosellToggle:Set(config.autosell) end
-    if config.autoplant ~= nil then autoplantToggle:Set(config.autoplant) end
-    if config.webhook then webhookBox.Text = config.webhook end
+    if config.autobuy then setSelected(autobuy_selected, checkboxes, config.autobuy) end
+    if config.autoplant then setSelected(autoplant_selected, checkboxes_plant, config.autoplant) end
+    if config.autogear then setSelected(autobuy_gear_selected, gears_checkboxes, config.autogear) end
+    if config.webhook and webhookBox then webhookBox.Text = config.webhook end
 end)
+
 
 
 local HttpService = game:GetService("HttpService")
