@@ -145,7 +145,7 @@ moneyLabel.Font = Enum.Font.GothamBold
 moneyLabel.TextSize = 18
 moneyLabel.TextXAlignment = Enum.TextXAlignment.Right
 moneyLabel.Text = "$0"
-moneyLabel.ZIndex = 3
+moneyLabel.ZIndex = 1
 
 -- Update loop
 task.spawn(function()
