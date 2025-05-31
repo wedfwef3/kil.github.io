@@ -806,7 +806,9 @@ autobuy_gear_toggle.MouseButton1Click:Connect(function()
 end)
 
 
--- === MAIN TAB (all ESP/collect buttons + Honey Shop Autobuy on top) ===
+
+-- === MAIN TAB (Honey Shop Autobuy as scrollable, rest of buttons always visible) ===
+
 local MainTab = CreateTab("Main")
 
 local honeyShopItems = {
@@ -830,10 +832,10 @@ end
 local autobuy_honey_running = false
 local autobuy_honey_thread
 
--- Label above the checkboxes
+-- Label
 local AutobuyHoneyLabel = Instance.new("TextLabel", MainTab)
 AutobuyHoneyLabel.Text = "Autobuy Honey Shop Items:"
-AutobuyHoneyLabel.Size = UDim2.new(0.7, 0, 0, 22)
+AutobuyHoneyLabel.Size = UDim2.new(0.68, 0, 0, 20)
 AutobuyHoneyLabel.Position = UDim2.new(0.15, 0, 0, 6)
 AutobuyHoneyLabel.BackgroundTransparency = 1
 AutobuyHoneyLabel.TextColor3 = Theme.Text
@@ -841,12 +843,24 @@ AutobuyHoneyLabel.Font = Enum.Font.GothamBold
 AutobuyHoneyLabel.TextSize = 16
 AutobuyHoneyLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Checkboxes for honey shop items
+-- ScrollingFrame for checkboxes
+local itemScroll = Instance.new("ScrollingFrame", MainTab)
+itemScroll.Size = UDim2.new(0.68, 0, 0, 92) -- (4 items * 22 + 4 spacing)
+itemScroll.Position = UDim2.new(0.15, 0, 0, 28)
+itemScroll.BackgroundColor3 = Theme.Button
+itemScroll.BackgroundTransparency = 0.1
+itemScroll.BorderSizePixel = 0
+itemScroll.CanvasSize = UDim2.new(0, 0, 0, #honeyShopItems*22)
+itemScroll.ScrollBarThickness = 5
+itemScroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+itemScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", itemScroll).CornerRadius = UDim.new(0, 6)
+
 local honey_checkboxes = {}
 for i, item in ipairs(honeyShopItems) do
-    local cb = Instance.new("TextButton", MainTab)
-    cb.Size = UDim2.new(0.5, 0, 0, 20)
-    cb.Position = UDim2.new(0.15, 0, 0, 28 + (i-1)*22)
+    local cb = Instance.new("TextButton", itemScroll)
+    cb.Size = UDim2.new(1, -6, 0, 20)
+    cb.Position = UDim2.new(0, 3, 0, (i-1)*22)
     cb.BackgroundColor3 = Theme.Button
     cb.TextColor3 = Theme.Text
     cb.Font = Enum.Font.Gotham
@@ -872,10 +886,10 @@ local function get_autobuy_honey_list()
     return t
 end
 
--- Autobuy button
+-- Autobuy button (next to scrolling list)
 local autobuy_honey_toggle = Instance.new("TextButton", MainTab)
-autobuy_honey_toggle.Size = UDim2.new(0.36, 0, 0, 28)
-autobuy_honey_toggle.Position = UDim2.new(0.62, 0, 0, 28 + #honeyShopItems*22)
+autobuy_honey_toggle.Size = UDim2.new(0.28, 0, 0, 38)
+autobuy_honey_toggle.Position = UDim2.new(0.84, -2, 0, 28)
 autobuy_honey_toggle.BackgroundColor3 = Theme.Button
 autobuy_honey_toggle.TextColor3 = Theme.Text
 autobuy_honey_toggle.Font = Enum.Font.GothamBold
@@ -905,22 +919,8 @@ autobuy_honey_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Calculate the offset for the next button (the rest of the main tab)
-local baseY = 36 + #honeyShopItems*22
-
-local function clr()
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BillboardGui") and v.Name == "MutationESP" then v:Destroy() end
-    end
-end
-
-local c = {
-    Wet=Color3.fromRGB(100,200,255),Gold=Color3.fromRGB(255,215,0),Frozen=Color3.fromRGB(135,206,235),
-    Rainbow=Color3.fromRGB(255,0,255),Choc=Color3.fromRGB(120,72,0),Chilled=Color3.fromRGB(170,230,255),
-    Shocked=Color3.fromRGB(255,255,100),Moonlit=Color3.fromRGB(150,100,255),Bloodlit=Color3.fromRGB(200,10,60),
-    Celestial=Color3.fromRGB(200,255,255),Disco=Color3.fromRGB(255,120,255),Zombified=Color3.fromRGB(80,255,100),
-    Plasma=Color3.fromRGB(60,255,255),["Honey Glazed"]=Color3.fromRGB(255, 200, 75),Pollinated=Color3.fromRGB(225, 255, 130)
-}
+-- Calculate offset for next button group
+local baseY = 28 + 92 + 8 -- 28 for label, 92 for scroll, 8 for spacing
 
 ----------------------
 -- Mutation ESP Button
@@ -1189,7 +1189,6 @@ honeyCollectBtn.MouseButton1Click:Connect(function()
         clr()
     end
 end)
-
 
 
 
