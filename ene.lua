@@ -121,17 +121,16 @@ local autobuy_running = false
 local autobuy_thread
 
 local AutobuyLabel = Instance.new("TextLabel", AutobuyTab)
--- Money Bar for Autobuy Tab (docks bottom right and moves with UI)
+
+-- Money Bar for Autobuy Tab (bottom right, stretches with UI)
 local leaderstats = localPlayer:FindFirstChild("leaderstats") or localPlayer:WaitForChild("leaderstats")
 local shecklesStat = leaderstats:FindFirstChild("Sheckles") or leaderstats:WaitForChild("Sheckles")
 
-
--- Money Bar for Autobuy Tab (fix: brighter blue, stretches with UI)
 local moneyBar = Instance.new("Frame", AutobuyTab)
-moneyBar.Size = UDim2.new(1, -24, 0, 32)  -- stretches almost full width
+moneyBar.Size = UDim2.new(1, -24, 0, 36)
 moneyBar.AnchorPoint = Vector2.new(1, 1)
 moneyBar.Position = UDim2.new(1, -12, 1, -12)
-moneyBar.BackgroundColor3 = Theme.Button
+moneyBar.BackgroundColor3 = Color3.fromRGB(54, 62, 70) -- lighter for contrast
 moneyBar.BackgroundTransparency = 0.08
 moneyBar.BorderSizePixel = 0
 moneyBar.ZIndex = 2
@@ -141,18 +140,20 @@ local moneyLabel = Instance.new("TextLabel", moneyBar)
 moneyLabel.Size = UDim2.new(1, -18, 1, 0)
 moneyLabel.Position = UDim2.new(0, 9, 0, 0)
 moneyLabel.BackgroundTransparency = 1
-moneyLabel.TextColor3 = Color3.fromRGB(0, 170, 255)  -- much brighter blue
-moneyLabel.TextStrokeTransparency = 0.7
+moneyLabel.TextColor3 = Color3.fromRGB(55, 255, 100)      -- bright green
+moneyLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)     -- black outline
+moneyLabel.TextStrokeTransparency = 0.3                    -- visible outline
 moneyLabel.Font = Enum.Font.GothamBold
-moneyLabel.TextSize = 18
+moneyLabel.TextSize = 22                                  -- larger font
 moneyLabel.TextXAlignment = Enum.TextXAlignment.Right
-moneyLabel.Text = "$0"
-moneyLabel.ZIndex = 1
+moneyLabel.Text = "0"
+moneyLabel.ZIndex = 3
 
 task.spawn(function()
     while true do
         local money = shecklesStat.Value
-        moneyLabel.Text = ("$%s"):format(tostring(money):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
+        -- Format with commas for readability
+        moneyLabel.Text = tostring(money):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
         task.wait(1)
     end
 end)
