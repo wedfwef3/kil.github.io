@@ -1049,7 +1049,7 @@ mutEspBtn.MouseButton1Click:Connect(function()
                         end
                     end
                 end
-                wait(2)
+                wait(5)
             end
         end)
         coroutine.resume(mutEspThread)
@@ -1127,7 +1127,7 @@ honeyEspBtn.MouseButton1Click:Connect(function()
         honeyEspThread = coroutine.create(function()
             while honeyEspRunning do
                 showPollinatedESP()
-                wait(2)
+                wait(5)
             end
         end)
         coroutine.resume(honeyEspThread)
