@@ -586,6 +586,7 @@ end)
 
 -- === AUTOCOLLECT LOGIC ===
 
+
 local function getMyFarm()
     for _, farm in pairs(workspace.Farm:GetChildren()) do
         local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
@@ -593,21 +594,17 @@ local function getMyFarm()
             return farm
         end
     end
-    return nil
 end
 
 local function getMyHarvestableCrops()
-    local myFarm = getMyFarm()
-    local crops = {}
+    local myFarm, crops = getMyFarm(), {}
     if myFarm then
-        local plants = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical")
+        local plants = myFarm:FindFirstChild("Important") and myFarm.Important:FindFirstChild("Plants_Physical") -- fixed typo here!
         if plants then
             for _, plant in pairs(plants:GetChildren()) do
                 for _, part in pairs(plant:GetDescendants()) do
-                    if part:IsA("BasePart") and part:FindFirstChildOfClass("ProximityPrompt") then
-                        table.insert(crops, part)
-                        break
-                    end
+                    local pr = part:IsA("BasePart") and part:FindFirstChildOfClass("ProximityPrompt")
+                    if pr then pr.MaxActivationDistance = 1000 table.insert(crops, part) break end
                 end
             end
         end
@@ -616,25 +613,20 @@ local function getMyHarvestableCrops()
 end
 
 local function autoCollectLoop()
+    local tp_interval, pr_delay = 7, 0.1
     while collecting do
         local crops = getMyHarvestableCrops()
-        for _, crop in ipairs(crops) do
-            if not collecting then return end
+        if #crops > 0 then
             local char = localPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp and crop and crop.Parent then
-                hrp.CFrame = CFrame.new(crop.Position + Vector3.new(0, 3, 0))
-                task.wait(0.15)
-                local prompt = crop:FindFirstChildOfClass("ProximityPrompt")
-                if prompt then
-                    pcall(function()
-                        fireproximityprompt(prompt)
-                    end)
-                    task.wait(0.1)
-                end
+            local crop = crops[math.random(1, #crops)]
+            if hrp and crop then hrp.CFrame = CFrame.new(crop.Position + Vector3.new(0, 3, 0)) end
+            for _, c in ipairs(crops) do
+                local pr = c:FindFirstChildOfClass("ProximityPrompt")
+                if pr then pcall(function() fireproximityprompt(pr) end) task.wait(pr_delay) end
             end
         end
-        task.wait(0.2)
+        task.wait(tp_interval)
     end
     autocollect_toggle.Text = "Start Autocollect"
     autocollect_toggle.BackgroundColor3 = Theme.Button
@@ -655,6 +647,9 @@ autocollect_toggle.MouseButton1Click:Connect(function()
         end
     end
 end)
+
+
+
 
 -- === END OF AUTOFARM TAB ===
 
