@@ -432,6 +432,8 @@ autoplant_toggle.MouseButton1Click:Connect(function()
 end)
 
 
+
+
 -- === AUTOFARM TAB (Autosell + Autocollect Combined, Interval-Based Autosell) ===
 
 local AutofarmTab = CreateTab("Autofarm")
@@ -462,8 +464,6 @@ autocollect_toggle.Font = Enum.Font.GothamBold
 autocollect_toggle.TextSize = 18
 autocollect_toggle.Text = "Start Autocollect"
 Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
-
--- You can put your autocollect logic here (not changed by autosell change)
 
 -- === AUTOSELL INTERVAL SLIDER ===
 local sliderLabel = Instance.new("TextLabel", AutofarmTab)
@@ -583,10 +583,8 @@ autosell_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- === END OF AUTOFARM TAB ===
+-- === AUTOCOLLECT LOGIC ===
 
-
--- AUTOCOLLECT LOGIC
 local function getMyFarm()
     for _, farm in pairs(workspace.Farm:GetChildren()) do
         local data = farm:FindFirstChild("Important") and farm.Important:FindFirstChild("Data")
@@ -616,55 +614,11 @@ local function getMyHarvestableCrops()
     return crops
 end
 
-local function isInventoryFull()
-    return #localPlayer.Backpack:GetChildren() >= autosell_threshold
-end
-
-local function sellInventory()
-    -- Teleport to Steven or shop and sell inventory
-    local steven = workspace.NPCS:FindFirstChild("Steven")
-    local char = localPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if steven and hrp then
-        local oldCFrame = hrp.CFrame
-        hrp.CFrame = steven.HumanoidRootPart.CFrame + Vector3.new(0, 3, 3)
-        task.wait(0.4)
-        for i = 1, 4 do
-            pcall(function()
-                game:GetService("ReplicatedStorage").GameEvents.Sell_Inventory:FireServer()
-            end)
-            task.wait(0.15)
-        end
-        hrp.CFrame = oldCFrame
-    end
-end
-
 local function autoCollectLoop()
     while collecting do
-        if isInventoryFull() then
-            if autosell_when_full then
-                autocollect_toggle.Text = "Autoselling..."
-                sellInventory()
-                -- Wait until not full
-                while collecting and isInventoryFull() do
-                    task.wait(0.5)
-                end
-                autocollect_toggle.Text = "Stop Autocollect"
-            else
-                autocollect_toggle.Text = "Backpack Full!"
-                -- Wait until user empties inventory
-                while collecting and isInventoryFull() do
-                    task.wait(0.5)
-                end
-                autocollect_toggle.Text = "Stop Autocollect"
-            end
-        end
-        if not collecting then break end
-
         local crops = getMyHarvestableCrops()
         for _, crop in ipairs(crops) do
             if not collecting then return end
-            if isInventoryFull() then break end
             local char = localPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp and crop and crop.Parent then
@@ -701,6 +655,7 @@ autocollect_toggle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- === END OF AUTOFARM TAB ===
 
 
 -- === AUTOBUY GEARS TAB ===
