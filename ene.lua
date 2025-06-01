@@ -432,17 +432,16 @@ autoplant_toggle.MouseButton1Click:Connect(function()
 end)
 
 
+-- === AUTOFARM TAB (Autosell + Autocollect Combined, Interval-Based Autosell) ===
 
--- === AUTOFARM TAB (Autosell + Autocollect Combined, Only Counts Plants, Not Seeds) ===
 local AutofarmTab = CreateTab("Autofarm")
 local autosell_running = false
 local autosell_thread
 local collecting = false
 local collect_thread
-local autosell_when_full = false
+local autosell_interval = 5 -- default seconds
 
-local autosell_threshold = 200
-
+-- Autofarm Features Label
 local autofarmLabel = Instance.new("TextLabel", AutofarmTab)
 autofarmLabel.Text = "Autofarm Features"
 autofarmLabel.Size = UDim2.new(1, -20, 0, 24)
@@ -464,32 +463,13 @@ autocollect_toggle.TextSize = 18
 autocollect_toggle.Text = "Start Autocollect"
 Instance.new("UICorner", autocollect_toggle).CornerRadius = UDim.new(0, 7)
 
-local autosell_collect_toggle = Instance.new("TextButton", AutofarmTab)
-autosell_collect_toggle.Size = UDim2.new(0.6, 0, 0, 32)
-autosell_collect_toggle.Position = UDim2.new(0, 16, 0, 84)
-autosell_collect_toggle.BackgroundColor3 = Theme.Button
-autosell_collect_toggle.TextColor3 = Theme.Text
-autosell_collect_toggle.Font = Enum.Font.Gotham
-autosell_collect_toggle.TextSize = 16
-autosell_collect_toggle.Text = "Autosell When Full: OFF"
-Instance.new("UICorner", autosell_collect_toggle).CornerRadius = UDim.new(0, 7)
+-- You can put your autocollect logic here (not changed by autosell change)
 
-autosell_collect_toggle.MouseButton1Click:Connect(function()
-    autosell_when_full = not autosell_when_full
-    if autosell_when_full then
-        autosell_collect_toggle.Text = "Autosell When Full: ON"
-        autosell_collect_toggle.BackgroundColor3 = Theme.Accent
-    else
-        autosell_collect_toggle.Text = "Autosell When Full: OFF"
-        autosell_collect_toggle.BackgroundColor3 = Theme.Button
-    end
-end)
-
--- === AUTOSELL SECTION (with Slider & Dragger) ===
+-- === AUTOSELL INTERVAL SLIDER ===
 local sliderLabel = Instance.new("TextLabel", AutofarmTab)
-sliderLabel.Text = "Sell when backpack has at least: "..tostring(autosell_threshold)
+sliderLabel.Text = "Autosell every " .. tostring(autosell_interval) .. " seconds"
 sliderLabel.Size = UDim2.new(1, -20, 0, 24)
-sliderLabel.Position = UDim2.new(0, 16, 0, 128)
+sliderLabel.Position = UDim2.new(0, 16, 0, 84)
 sliderLabel.BackgroundTransparency = 1
 sliderLabel.TextColor3 = Theme.Text
 sliderLabel.Font = Enum.Font.GothamBold
@@ -499,7 +479,7 @@ sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
 local sliderFrame = Instance.new("Frame", AutofarmTab)
 sliderFrame.BackgroundColor3 = Theme.Button
 sliderFrame.Size = UDim2.new(0.9, 0, 0, 14)
-sliderFrame.Position = UDim2.new(0, 16, 0, 152)
+sliderFrame.Position = UDim2.new(0, 16, 0, 108)
 Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 5)
 
 local sliderBar = Instance.new("Frame", sliderFrame)
@@ -516,10 +496,10 @@ local function setSliderFromX(x)
     local left = sliderFrame.AbsolutePosition.X
     local width = sliderFrame.AbsoluteSize.X
     local rel = math.clamp((x - left) / width, 0, 1)
-    autosell_threshold = math.floor(1 + rel * 199 + 0.5)
+    autosell_interval = math.max(1, math.floor(1 + rel * 59 + 0.5)) -- 1 to 60 seconds
     local barPos = rel * width - sliderBar.Size.X.Offset/2
     sliderBar.Position = UDim2.new(0, barPos, 0.5, 0)
-    sliderLabel.Text = "Sell when backpack has at least: "..tostring(autosell_threshold)
+    sliderLabel.Text = "Autosell every " .. tostring(autosell_interval) .. " seconds"
 end
 
 local function beginDrag(input)
@@ -558,40 +538,16 @@ end)
 
 sliderBar.Position = UDim2.new(1, -6, 0.5, 0)
 
+-- === AUTOSELL TOGGLE BUTTON & LOGIC ===
 local autosell_toggle = Instance.new("TextButton", AutofarmTab)
 autosell_toggle.Size = UDim2.new(0.6, 0, 0, 38)
-autosell_toggle.Position = UDim2.new(0, 16, 0, 176)
+autosell_toggle.Position = UDim2.new(0, 16, 0, 132)
 autosell_toggle.BackgroundColor3 = Theme.Button
 autosell_toggle.TextColor3 = Theme.Text
 autosell_toggle.Font = Enum.Font.GothamBold
 autosell_toggle.TextSize = 18
 autosell_toggle.Text = "Start Autosell"
 Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
-
--- === PLANTS-ONLY LOGIC ===
-local function countSellablePlants()
-    local Backpack = localPlayer:FindFirstChild("Backpack")
-    if not Backpack then return 0 end
-    local count = 0
-    for _, item in ipairs(Backpack:GetChildren()) do
-        for _, plantName in ipairs(seeds) do
-            if item.Name == plantName then
-                count = count + 1
-                break
-            end
-        end
-    end
-    return count
-end
-
-local function isInventoryFull()
-    return countSellablePlants() >= autosell_threshold
-end
-
-local function getHRP()
-    local char = localPlayer.Character
-    return char and char:FindFirstChild("HumanoidRootPart")
-end
 
 autosell_toggle.MouseButton1Click:Connect(function()
     if not autosell_running then
@@ -601,27 +557,34 @@ autosell_toggle.MouseButton1Click:Connect(function()
         autosell_thread = task.spawn(function()
             local GE = ReplicatedStorage.GameEvents
             while autosell_running do
-                local Backpack = localPlayer:FindFirstChild("Backpack")
-                local hrp = getHRP()
-                if Backpack and countSellablePlants() >= autosell_threshold and hrp then
+                local hrp = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
                     local pos = hrp.CFrame
-                    repeat
-                        hrp.CFrame = workspace.Tutorial_Points.Tutorial_Point_2.CFrame
-                        task.wait(0.2)
-                        GE.Sell_Inventory:FireServer()
-                        task.wait(0.2)
-                    until not autosell_running or countSellablePlants() < autosell_threshold
+                    hrp.CFrame = workspace.Tutorial_Points.Tutorial_Point_2.CFrame
+                    task.wait(0.2)
+                    GE.Sell_Inventory:FireServer()
+                    task.wait(0.2)
                     hrp.CFrame = pos
                 end
-                task.wait(1)
+                for i = 1, autosell_interval do
+                    if not autosell_running then break end
+                    task.wait(1)
+                end
             end
         end)
     else
         autosell_running = false
         autosell_toggle.Text = "Start Autosell"
         autosell_toggle.BackgroundColor3 = Theme.Button
+        if autosell_thread then
+            task.cancel(autosell_thread)
+            autosell_thread = nil
+        end
     end
 end)
+
+-- === END OF AUTOFARM TAB ===
+
 
 -- AUTOCOLLECT LOGIC
 local function getMyFarm()
