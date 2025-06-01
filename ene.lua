@@ -432,7 +432,8 @@ autoplant_toggle.MouseButton1Click:Connect(function()
 end)
 
 
--- === AUTOFARM TAB (Autosell + Autocollect Combined) ===
+
+-- === AUTOFARM TAB (Autosell + Autocollect Combined, Only Counts Plants, Not Seeds) ===
 local AutofarmTab = CreateTab("Autofarm")
 local autosell_running = false
 local autosell_thread
@@ -567,7 +568,26 @@ autosell_toggle.TextSize = 18
 autosell_toggle.Text = "Start Autosell"
 Instance.new("UICorner", autosell_toggle).CornerRadius = UDim.new(0, 7)
 
--- === LOGIC ===
+-- === PLANTS-ONLY LOGIC ===
+local function countSellablePlants()
+    local Backpack = localPlayer:FindFirstChild("Backpack")
+    if not Backpack then return 0 end
+    local count = 0
+    for _, item in ipairs(Backpack:GetChildren()) do
+        for _, plantName in ipairs(seeds) do
+            if item.Name == plantName then
+                count = count + 1
+                break
+            end
+        end
+    end
+    return count
+end
+
+local function isInventoryFull()
+    return countSellablePlants() >= autosell_threshold
+end
+
 local function getHRP()
     local char = localPlayer.Character
     return char and char:FindFirstChild("HumanoidRootPart")
@@ -583,14 +603,14 @@ autosell_toggle.MouseButton1Click:Connect(function()
             while autosell_running do
                 local Backpack = localPlayer:FindFirstChild("Backpack")
                 local hrp = getHRP()
-                if Backpack and #Backpack:GetChildren() >= autosell_threshold and hrp then
+                if Backpack and countSellablePlants() >= autosell_threshold and hrp then
                     local pos = hrp.CFrame
                     repeat
                         hrp.CFrame = workspace.Tutorial_Points.Tutorial_Point_2.CFrame
                         task.wait(0.2)
                         GE.Sell_Inventory:FireServer()
                         task.wait(0.2)
-                    until not autosell_running or #Backpack:GetChildren()<autosell_threshold
+                    until not autosell_running or countSellablePlants() < autosell_threshold
                     hrp.CFrame = pos
                 end
                 task.wait(1)
