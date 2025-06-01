@@ -1410,14 +1410,19 @@ end)
 
 
 
-
 local HttpService = game:GetService("HttpService")
 local CONFIG_FILE = "MyGardenConfig.json"
 local Theme = Theme
 
 local SettingsTab = CreateTab("Settings")
 
--- Notification label for status messages
+local settings_leftX = 0.075
+local settings_rightX = 0.62
+local settings_btnWidth = 0.36
+local settings_btnHeight = 36
+local settings_topY = 40
+local settings_spacing = 16
+
 local notifLabel = Instance.new("TextLabel", SettingsTab)
 notifLabel.Size = UDim2.new(1, -40, 0, 22)
 notifLabel.Position = UDim2.new(0, 20, 0, 12)
@@ -1428,10 +1433,10 @@ notifLabel.TextSize = 16
 notifLabel.Text = ""
 notifLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Join Low Server Button
+-- Join Low Server (Left, Row 1)
 local joinLowServerBtn = Instance.new("TextButton", SettingsTab)
-joinLowServerBtn.Size = UDim2.new(0, 180, 0, 36)
-joinLowServerBtn.Position = UDim2.new(0, 20, 0, 50)
+joinLowServerBtn.Size = UDim2.new(settings_btnWidth, 0, 0, settings_btnHeight)
+joinLowServerBtn.Position = UDim2.new(settings_leftX, 0, 0, settings_topY)
 joinLowServerBtn.BackgroundColor3 = Theme.Accent
 joinLowServerBtn.TextColor3 = Theme.Text
 joinLowServerBtn.Font = Enum.Font.GothamBold
@@ -1473,10 +1478,10 @@ joinLowServerBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Delete Other Farms Button
+-- Delete Other Farms (Right, Row 1)
 local otherFarmBtn = Instance.new("TextButton", SettingsTab)
-otherFarmBtn.Size = UDim2.new(0, 180, 0, 36)
-otherFarmBtn.Position = UDim2.new(0, 220, 0, 50)
+otherFarmBtn.Size = UDim2.new(settings_btnWidth, 0, 0, settings_btnHeight)
+otherFarmBtn.Position = UDim2.new(settings_rightX, 0, 0, settings_topY)
 otherFarmBtn.BackgroundColor3 = Theme.Button
 otherFarmBtn.TextColor3 = Theme.Text
 otherFarmBtn.Font = Enum.Font.GothamBold
@@ -1495,7 +1500,7 @@ otherFarmBtn.MouseButton1Click:Connect(function()
     otherFarmBtn.Visible = false
 end)
 
--- Helpers for config
+-- === CONFIG HELPERS ===
 local function getSelected(tbl)
     local out = {}
     for k, v in pairs(tbl) do
@@ -1534,10 +1539,10 @@ local function resetConfig()
     if isfile(CONFIG_FILE) then delfile(CONFIG_FILE) end
 end
 
--- Save Config Button
+-- Save Config (Left, Row 2)
 local saveBtn = Instance.new("TextButton", SettingsTab)
-saveBtn.Size = UDim2.new(0, 120, 0, 36)
-saveBtn.Position = UDim2.new(0, 20, 0, 110)
+saveBtn.Size = UDim2.new(settings_btnWidth, 0, 0, settings_btnHeight)
+saveBtn.Position = UDim2.new(settings_leftX, 0, 0, settings_topY + settings_btnHeight + settings_spacing)
 saveBtn.BackgroundColor3 = Theme.Accent
 saveBtn.TextColor3 = Theme.Text
 saveBtn.Font = Enum.Font.GothamBold
@@ -1555,10 +1560,10 @@ saveBtn.MouseButton1Click:Connect(function()
     notifLabel.Text = "✅ Config saved!"
 end)
 
--- Reset Config Button
+-- Reset Config (Right, Row 2)
 local resetBtn = Instance.new("TextButton", SettingsTab)
-resetBtn.Size = UDim2.new(0, 120, 0, 36)
-resetBtn.Position = UDim2.new(0, 160, 0, 110)
+resetBtn.Size = UDim2.new(settings_btnWidth, 0, 0, settings_btnHeight)
+resetBtn.Position = UDim2.new(settings_rightX, 0, 0, settings_topY + settings_btnHeight + settings_spacing)
 resetBtn.BackgroundColor3 = Theme.Button
 resetBtn.TextColor3 = Theme.Text
 resetBtn.Font = Enum.Font.GothamBold
@@ -1574,11 +1579,10 @@ resetBtn.MouseButton1Click:Connect(function()
     notifLabel.Text = "Config reset."
 end)
 
-
--- Reduce Lag Button (place below Reset Config)
+-- Reduce Lag (Left, Row 3)
 local reduceLagBtn = Instance.new("TextButton", SettingsTab)
-reduceLagBtn.Size = UDim2.new(0, 120, 0, 36)
-reduceLagBtn.Position = UDim2.new(0, 300, 0, 110)
+reduceLagBtn.Size = UDim2.new(settings_btnWidth, 0, 0, settings_btnHeight)
+reduceLagBtn.Position = UDim2.new(settings_leftX, 0, 0, settings_topY + (settings_btnHeight + settings_spacing) * 2)
 reduceLagBtn.BackgroundColor3 = Theme.Accent
 reduceLagBtn.TextColor3 = Theme.Text
 reduceLagBtn.Font = Enum.Font.GothamBold
@@ -1608,7 +1612,7 @@ reduceLagBtn.MouseButton1Click:Connect(function()
     notifLabel.Text = "Lag reduced!"
 end)
 
--- Auto-load config on script start
+-- === AUTOLOAD CONFIG ON SCRIPT START ===
 task.spawn(function()
     local config = loadConfig()
     if config.autobuy then setSelected(autobuy_selected, checkboxes, config.autobuy) end
@@ -1616,6 +1620,8 @@ task.spawn(function()
     if config.autogear then setSelected(autobuy_gear_selected, gears_checkboxes, config.autogear) end
     if config.webhook and webhookBox then webhookBox.Text = config.webhook end
 end)
+
+
 
 
 local HttpService = game:GetService("HttpService")
