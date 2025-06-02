@@ -26,9 +26,6 @@ for i = 1, 2 do
 end
 
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/fly.github.io/refs/heads/main/fly.lua"))()
-
-
 -- Utility: check if a model has unanchored parts
 local function isUnanchored(model)
     for _, p in pairs(model:GetDescendants()) do
@@ -171,3 +168,4 @@ task.spawn(function()
         seatWeld:Destroy()
     end
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/fly.github.io/refs/heads/main/fly.lua"))()
