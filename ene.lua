@@ -168,4 +168,8 @@ task.spawn(function()
         seatWeld:Destroy()
     end
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/fly.github.io/refs/heads/main/fly.lua"))()
+task.spawn(function()
+    task.wait(0.5) -- Wait for 120 seconds before executing
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/ringtaa/fly.github.io/refs/heads/main/fly.lua"))()
+end)
+        
